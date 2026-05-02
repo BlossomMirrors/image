@@ -25,7 +25,7 @@ steps:
   - name: build-base-latest
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: push
         branch: main
@@ -46,7 +46,7 @@ steps:
   - name: build-dx-latest
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: push
         branch: main
@@ -67,7 +67,7 @@ steps:
   - name: build-nvidia-latest
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: push
         branch: main
@@ -88,7 +88,7 @@ steps:
   - name: build-dx-nvidia-latest
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: push
         branch: main
@@ -111,7 +111,7 @@ steps:
   - name: build-base-main
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: manual
     environment:
@@ -130,7 +130,7 @@ steps:
   - name: build-dx-main
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: manual
     environment:
@@ -149,7 +149,7 @@ steps:
   - name: build-nvidia-main
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: manual
     environment:
@@ -168,7 +168,7 @@ steps:
   - name: build-dx-nvidia-main
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
-    depends_on: [clone]
+    depends_on: []
     when:
       - event: manual
     environment:
