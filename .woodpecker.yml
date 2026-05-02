@@ -1,0 +1,99 @@
+---
+when:
+  - event: push
+    branch: main
+  - event: cron
+    cron: daily-build
+  - event: manual
+
+variables:
+  - &registry "git.blossomos.org"
+  - &env
+    REGISTRY: *registry
+    REGISTRY_USER:
+      from_secret: registry_user
+    REGISTRY_HTTP_SECRET:
+      from_secret: registry_http_secret
+    COSIGN_PRIVATE_KEY:
+      from_secret: cosign_private_key
+    COSIGN_PASSWORD: ""
+    GITHUB_TOKEN: ""
+
+steps:
+  - name: build-push-sign-latest
+    image: ghcr.io/ublue-os/devcontainer:latest
+    privileged: true
+    when:
+      - event: push
+        branch: main
+      - event: cron
+        cron: daily-build
+    environment:
+      <<: *env
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
+    commands:
+      - mkdir -p /root/.docker
+      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
+      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
+
+      # base -> :latest
+      - just build blossomos latest main
+      - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:latest
+      - podman push git.blossomos.org/blossom/image:latest --digestfile /tmp/digest-base.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest@$(cat /tmp/digest-base.txt)"
+
+      # dx -> :latest-dx
+      - just build blossomos-dx latest main
+      - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:latest-dx
+      - podman push git.blossomos.org/blossom/image:latest-dx --digestfile /tmp/digest-dx.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx@$(cat /tmp/digest-dx.txt)"
+
+      # nvidia -> :latest-nvidia
+      - just build blossomos latest nvidia-open
+      - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:latest-nvidia
+      - podman push git.blossomos.org/blossom/image:latest-nvidia --digestfile /tmp/digest-nvidia.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-nvidia@$(cat /tmp/digest-nvidia.txt)"
+
+      # dx-nvidia -> :latest-dx-nvidia
+      - just build blossomos-dx latest nvidia-open
+      - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:latest-dx-nvidia
+      - podman push git.blossomos.org/blossom/image:latest-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"
+
+  - name: build-push-sign-main
+    image: ghcr.io/ublue-os/devcontainer:latest
+    privileged: true
+    when:
+      - event: manual
+    environment:
+      <<: *env
+      IMAGE_REF: "https://repo.blossomos.org/release/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
+    commands:
+      - mkdir -p /root/.docker
+      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
+      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
+
+      # base -> :main
+      - just build blossomos latest main
+      - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:main
+      - podman push git.blossomos.org/blossom/image:main --digestfile /tmp/digest-base.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main@$(cat /tmp/digest-base.txt)"
+
+      # dx -> :main-dx
+      - just build blossomos-dx latest main
+      - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:main-dx
+      - podman push git.blossomos.org/blossom/image:main-dx --digestfile /tmp/digest-dx.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-dx@$(cat /tmp/digest-dx.txt)"
+
+      # nvidia -> :main-nvidia
+      - just build blossomos latest nvidia-open
+      - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:main-nvidia
+      - podman push git.blossomos.org/blossom/image:main-nvidia --digestfile /tmp/digest-nvidia.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-nvidia@$(cat /tmp/digest-nvidia.txt)"
+
+      # dx-nvidia -> :main-dx-nvidia
+      - just build blossomos-dx latest nvidia-open
+      - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:main-dx-nvidia
+      - podman push git.blossomos.org/blossom/image:main-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"

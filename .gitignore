@@ -1,0 +1,7 @@
+cosign.key
+*.key
+output/
+/Containerfile
+/.bluebuild-scripts_*
+*.iso
+*.iso-CHECKSUM
