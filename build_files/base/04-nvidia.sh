@@ -15,6 +15,5 @@ kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-dr
 EOF
 
 [ -d /ctx/system_files/nvidia ] && rsync -rvKl /ctx/system_files/nvidia/ /
-systemctl enable ublue-nvidia-flatpak-runtime-sync.service
 
 echo "::endgroup::"
