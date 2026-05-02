@@ -23,11 +23,8 @@ systemctl enable flatpak-nuke-fedora.service
 # disable sunshine service
 systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 
-# Updater
-systemctl enable uupd.timer
-
-# Disable the old update timer
-systemctl disable rpm-ostreed-automatic.timer
+# Enable the automatic updates by default
+systemctl enable rpm-ostreed-automatic.timer
 
 # Hide Desktop Files. Hidden removes mime associations
 for file in htop nvtop; do
