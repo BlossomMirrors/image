@@ -2,6 +2,13 @@
 
 set -eoux pipefail
 
+# Force the correct VERSION_ID to prevent dnf/rpmdb corruption
+# (Resolves the issue where kinoite:44 might temporarily report VERSION_ID=43)
+if [[ -n "${FEDORA_MAJOR_VERSION:-}" ]]; then
+    sed -i "s|^VERSION_ID=.*|VERSION_ID=${FEDORA_MAJOR_VERSION}|" /usr/lib/os-release
+    sed -i "s|^VERSION_ID=.*|VERSION_ID=${FEDORA_MAJOR_VERSION}|" /etc/os-release || true
+fi
+
 echo "::group:: Copy Files"
 
 # Speeds up local builds
