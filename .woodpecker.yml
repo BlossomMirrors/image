@@ -20,7 +20,7 @@ variables:
     GITHUB_TOKEN: ""
 
   # Install the BlueBuild CLI into the PATH
-  - &install_bluebuild curl -fsSL -o /usr/local/bin/bluebuild https://github.com/blue-build/cli/releases/latest/download/bluebuild-x86_64-unknown-linux-musl && chmod +x /usr/local/bin/bluebuild
+  - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
 
   # Authenticate with the container registry before building/pushing
   - &registry_login mkdir -p /root/.docker && env AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]') && printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
