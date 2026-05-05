@@ -4,7 +4,7 @@ echo "::group:: ===$(basename "$0")==="
 
 set -eoux pipefail
 
-# ZFS is only installed on coreos-stable
+# ZFS is only installed on coreos-testing
 
 ZFS_RPMS=(
     /tmp/rpms/kmods/zfs/kmod-zfs-"${KERNEL}"-*.rpm

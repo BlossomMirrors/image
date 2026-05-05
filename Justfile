@@ -114,7 +114,7 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
 
     # AKMODS Flavor and Kernel Version
     if [[ "${tag}" =~ stable ]]; then
-        akmods_flavor="coreos-stable"
+        akmods_flavor="coreos-testing"
     elif [[ "${tag}" =~ beta ]]; then
         akmods_flavor="main"
     else
@@ -222,7 +222,7 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     echo "::endgroup::"
 
     case "${akmods_flavor}" in
-    "coreos-stable") BUILD_ARGS+=("--cpp-flag=-DZFS") ;;
+    "coreos-testing") BUILD_ARGS+=("--cpp-flag=-DZFS") ;;
     esac
 
     if [[ "${image_name}" =~ nvidia ]]; then
