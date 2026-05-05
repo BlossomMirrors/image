@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+# Add all human users to blossomos-dx groups (docker, libvirt, incus)
+set -euo pipefail
+
+GROUPS_TO_ADD=(docker libvirt incus-admin)
+
+while IFS=: read -r username _ uid _ _ home shell; do
+    [[ "$uid" -lt 1000 ]] && continue
+    [[ "$shell" == */nologin ]] && continue
+    [[ "$shell" == */false ]] && continue
+    for group in "${GROUPS_TO_ADD[@]}"; do
+        if getent group "$group" &>/dev/null; then
+            usermod -aG "$group" "$username" 2>/dev/null || true
+        fi
+    done
+done < /etc/passwd

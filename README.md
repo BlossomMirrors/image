@@ -2,7 +2,7 @@
 
 [![Build Status](https://ci.blossomos.org/api/badges/1/status.svg)](https://ci.blossomos.org)
 
-BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kinoite](https://fedoraproject.org/kinoite/) (KDE Plasma), using [Universal Blue](https://universal-blue.org/) tooling.
+BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kinoite](https://fedoraproject.org/kinoite/) (KDE Plasma), using [BlueBuild](https://blue-build.org/) for declarative image configuration.
 
 ## Images
 
@@ -21,19 +21,36 @@ Published to `git.blossomos.org/blossom/image`.
 
 `latest` tags use the in-development package repo. `main` tags use the stable release repo and are built on manual trigger.
 
-## Building
+## Repository layout
 
-Requires [just](https://just.systems/) and Podman (or Docker).
+```
+recipes/          # BlueBuild recipe files — one per image variant
+  recipe.yml
+  recipe-nvidia.yml
+  recipe-dx.yml
+  recipe-dx-nvidia.yml
+files/
+  scripts/        # Build-time scripts run inside the container
+  system/         # Runtime system files copied to / in the image
+  packages.dnf    # RPM package list
+  packages.flatpak  # Flatpak preinstall list
+```
+
+## Building locally
+
+Requires the [BlueBuild CLI](https://blue-build.org/learn/getting-started/) and Podman (v4+) or Buildah (v1.29+).
 
 ```sh
-# Build base image
-just build blossomos latest main
+# Install the CLI
+curl -fsSL -o /usr/local/bin/bluebuild \
+  https://github.com/blue-build/cli/releases/latest/download/bluebuild-x86_64-unknown-linux-musl
+chmod +x /usr/local/bin/bluebuild
 
-# Build dx variant
-just build blossomos-dx latest main
-
-# Build with NVIDIA support
-just build blossomos latest nvidia-open
+# Build a variant
+bluebuild build recipes/recipe.yml
+bluebuild build recipes/recipe-dx.yml
+bluebuild build recipes/recipe-nvidia.yml
+bluebuild build recipes/recipe-dx-nvidia.yml
 ```
 
 ## Verification

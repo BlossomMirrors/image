@@ -1,0 +1,61 @@
+name: blossomos-nvidia-open
+description: BlossomOS NVIDIA open kernel module variant
+base-image: quay.io/fedora-ostree-desktops/kinoite
+image-version: 44
+
+modules:
+  # Install kernel from coreos-stable akmods + NVIDIA open drivers + kernel modules
+  - type: akmods
+    base: coreos-stable
+    nvidia:
+      type: open
+    install:
+      - xone
+      - openrazer
+      - v4l2loopback
+
+  # Copy shared system configuration files into the image
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  # Install RPM packages, repos, and COPR packages
+  - type: script
+    scripts:
+      - scripts/01-packages.sh
+
+  # Download external assets: starship, nerdfonts, flatpak preinstalls, etc.
+  - type: script
+    scripts:
+      - scripts/03-fetch.sh
+
+  # Add BlossomOS-specific RPM packages and Flatpak remote
+  - type: script
+    scripts:
+      - scripts/04-blossomos.sh
+
+  # NVIDIA post-install: remove nouveau icd, add libnvidia-ml.so symlink, kargs
+  - type: script
+    scripts:
+      - scripts/04-nvidia.sh
+
+  # Override installs: remove chsh, compile gschemas, Samba setup
+  - type: script
+    scripts:
+      - scripts/16-override-install.sh
+
+  # Enable/disable systemd units and clean up repo files
+  - type: script
+    scripts:
+      - scripts/17-cleanup.sh
+
+  # Write os-release branding and image-info.json
+  - type: script
+    scripts:
+      - scripts/18-image-info.sh
+
+  # Rebuild initramfs for the installed kernel
+  - type: script
+    scripts:
+      - scripts/19-initramfs.sh
