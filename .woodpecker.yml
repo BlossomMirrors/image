@@ -21,6 +21,9 @@ variables:
     BUILDAH_ISOLATION: chroot
     STORAGE_DRIVER: fuse-overlayfs
 
+  # Install dependencies
+  - &install_deps dnf install -y fuse-overlayfs
+
   # Install the BlueBuild CLI into the PATH
   - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
 
@@ -43,6 +46,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe.yml
@@ -63,7 +67,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
-      - dnf install -y fuse-overlayfs
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-dx.yml
@@ -84,6 +88,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-nvidia.yml
@@ -104,6 +109,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-dx-nvidia.yml
@@ -123,6 +129,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe.yml
@@ -140,6 +147,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-dx.yml
@@ -157,6 +165,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-nvidia.yml
@@ -174,6 +183,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
+      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-dx-nvidia.yml
