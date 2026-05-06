@@ -4,6 +4,11 @@ base-image: quay.io/fedora-ostree-desktops/kinoite
 image-version: 44
 
 modules:
+  # Install RPM packages, repos, and COPR packages
+  - type: script
+    scripts:
+      - scripts/01-packages.sh
+
   # Install kernel from main akmods + NVIDIA open drivers + kernel modules
   - type: akmods
     base: main
@@ -18,11 +23,6 @@ modules:
     files:
       - source: system
         destination: /
-
-  # Install RPM packages, repos, and COPR packages
-  - type: script
-    scripts:
-      - scripts/01-packages.sh
 
   # Download external assets: starship, nerdfonts, flatpak preinstalls, etc.
   - type: script

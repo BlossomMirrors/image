@@ -20,7 +20,6 @@ variables:
     GITHUB_TOKEN: ""
     BUILDAH_ISOLATION: chroot
     STORAGE_DRIVER: overlay
-    STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
 
   # Install the BlueBuild CLI into the PATH
   - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
