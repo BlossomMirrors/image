@@ -4,11 +4,11 @@ base-image: quay.io/fedora-ostree-desktops/kinoite
 image-version: 44
 
 modules:
-  # Install kernel from coreos-testing akmods + NVIDIA open drivers + kernel modules
+  # Install kernel from main akmods + NVIDIA open drivers + kernel modules
   - type: akmods
-    base: coreos-testing
+    base: main
+    nvidia-driver: nvidia-open
     install:
-      - nvidia
       - xone
       - openrazer
       - v4l2loopback
