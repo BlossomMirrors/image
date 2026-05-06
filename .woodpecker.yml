@@ -46,7 +46,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe.yml
+      - bluebuild build -vv recipes/recipe.yml
       - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:latest
       - podman push git.blossomos.org/blossom/image:latest --digestfile /tmp/digest-base.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest@$(cat /tmp/digest-base.txt)"
@@ -66,7 +66,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe-dx.yml
+      - bluebuild build -vv recipes/recipe-dx.yml
       - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:latest-dx
       - podman push git.blossomos.org/blossom/image:latest-dx --digestfile /tmp/digest-dx.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx@$(cat /tmp/digest-dx.txt)"
@@ -86,7 +86,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe-nvidia.yml
+      - bluebuild build -vv recipes/recipe-nvidia.yml
       - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:latest-nvidia
       - podman push git.blossomos.org/blossom/image:latest-nvidia --digestfile /tmp/digest-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-nvidia@$(cat /tmp/digest-nvidia.txt)"
@@ -106,7 +106,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe-dx-nvidia.yml
+      - bluebuild build -vv recipes/recipe-dx-nvidia.yml
       - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:latest-dx-nvidia
       - podman push git.blossomos.org/blossom/image:latest-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"
@@ -125,7 +125,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe.yml
+      - bluebuild build -vv recipes/recipe.yml
       - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:main
       - podman push git.blossomos.org/blossom/image:main --digestfile /tmp/digest-base.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main@$(cat /tmp/digest-base.txt)"
@@ -142,7 +142,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe-dx.yml
+      - bluebuild build -vv recipes/recipe-dx.yml
       - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:main-dx
       - podman push git.blossomos.org/blossom/image:main-dx --digestfile /tmp/digest-dx.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-dx@$(cat /tmp/digest-dx.txt)"
@@ -159,7 +159,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe-nvidia.yml
+      - bluebuild build -vv recipes/recipe-nvidia.yml
       - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:main-nvidia
       - podman push git.blossomos.org/blossom/image:main-nvidia --digestfile /tmp/digest-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-nvidia@$(cat /tmp/digest-nvidia.txt)"
@@ -176,7 +176,7 @@ steps:
     commands:
       - *install_bluebuild
       - *registry_login
-      - bluebuild build recipes/recipe-dx-nvidia.yml
+      - bluebuild build -vv recipes/recipe-dx-nvidia.yml
       - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:main-dx-nvidia
       - podman push git.blossomos.org/blossom/image:main-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"
