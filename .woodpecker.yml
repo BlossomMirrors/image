@@ -44,7 +44,6 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
-      - *install_deps
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe.yml
