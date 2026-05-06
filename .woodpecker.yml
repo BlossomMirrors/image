@@ -18,8 +18,8 @@ variables:
       from_secret: cosign_private_key
     COSIGN_PASSWORD: ""
     GITHUB_TOKEN: ""
-    BUILDAH_ISOLATION: "chroot"
-    STORAGE_DRIVER: "vfs"
+    BUILDAH_ISOLATION: chroot
+    STORAGE_DRIVER: fuse-overlayfs
 
   # Install the BlueBuild CLI into the PATH
   - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
