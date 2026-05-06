@@ -63,6 +63,7 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
+      - dnf install -y fuse-overlayfs
       - *install_bluebuild
       - *registry_login
       - bluebuild build recipes/recipe-dx.yml
