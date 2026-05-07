@@ -161,9 +161,13 @@ esac
 if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
     readarray -t INSTALLED_EXCLUDED < <(rpm -qa --queryformat='%{NAME}\n' "${EXCLUDED_PACKAGES[@]}" 2>/dev/null || true)
     if [[ "${#INSTALLED_EXCLUDED[@]}" -gt 0 ]]; then
-        dnf5 -y remove "${INSTALLED_EXCLUDED[@]}"
+        # Use rpm --erase --nodeps to avoid scriptlet failures in container environment
+        # (systemd units don't exist during build, causing scriptlet errors)
+        for pkg in "${INSTALLED_EXCLUDED[@]}"; do
+            rpm --erase --nodeps "$pkg" 2>/dev/null || true
+        done
     else
-        echo "No excluded packages found to remove."
+        echo "No excluded package found to remove."
     fi
 fi
 
