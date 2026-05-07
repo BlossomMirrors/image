@@ -7,7 +7,7 @@ modules:
   # Install RPM packages, repos, and COPR packages
   - type: script
     scripts:
-      - scripts/01-packages.sh
+      - 01-packages.sh
 
   # Install kernel from main akmods + kernel modules
   - type: akmods
@@ -26,34 +26,34 @@ modules:
   # Install developer tools: Docker, VSCode, QEMU/libvirt, COPR dev packages
   - type: script
     scripts:
-      - scripts/00-dx.sh
+      - 00-dx.sh
 
   # Download external assets: starship, nerdfonts, flatpak preinstalls, etc.
   - type: script
     scripts:
-      - scripts/03-fetch.sh
+      - 03-fetch.sh
 
   # Add BlossomOS-specific RPM packages and Flatpak remote
   - type: script
     scripts:
-      - scripts/04-blossomos.sh
+      - 04-blossomos.sh
 
   # Override installs: remove chsh, compile gschemas, Samba setup
   - type: script
     scripts:
-      - scripts/16-override-install.sh
+      - 16-override-install.sh
 
   # Enable/disable systemd units and clean up repo files
   - type: script
     scripts:
-      - scripts/17-cleanup.sh
+      - 17-cleanup.sh
 
   # Write os-release branding and image-info.json
   - type: script
     scripts:
-      - scripts/18-image-info.sh
+      - 18-image-info.sh
 
   # Rebuild initramfs for the installed kernel
   - type: script
     scripts:
-      - scripts/19-initramfs.sh
+      - 19-initramfs.sh
