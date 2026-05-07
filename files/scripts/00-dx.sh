@@ -110,6 +110,8 @@ copr_install_isolated "ublue-os/packages" "ublue-os-libvirt-workarounds"
 # DX packages to exclude - common to all versions
 EXCLUDED_PACKAGES=()
 
+FEDORA_MAJOR_VERSION=$(rpm -E '%fedora')
+
 # Version-specific package exclusions for DX
 case "$FEDORA_MAJOR_VERSION" in
     43)

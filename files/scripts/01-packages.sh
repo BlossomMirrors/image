@@ -55,6 +55,8 @@ source "$CONFIG_DIRECTORY/scripts/copr-helpers.sh"
 # https://github.com/ublue-os/aurora/issues/1227
 dnf5 versionlock add plasma-desktop
 
+FEDORA_MAJOR_VERSION=$(rpm -E '%fedora')
+
 mapfile -t FEDORA_PACKAGES < <(grep -v '^#\|^[[:space:]]*$' $CONFIG_DIRECTORY/packages.dnf)
 
 # Version-specific Fedora package additions
