@@ -20,6 +20,7 @@ variables:
     GITHUB_TOKEN: ""
     BUILDAH_ISOLATION: chroot
     STORAGE_DRIVER: overlay
+    STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
 
   # Cleanup stale buildah state before building
   - &buildah_cleanup buildah rm --all 2>/dev/null || true; buildah unshare -- rm -rf /var/tmp/buildah* 2>/dev/null || true
