@@ -4,6 +4,11 @@ base-image: quay.io/fedora-ostree-desktops/kinoite
 image-version: 44
 
 modules:
+  # Try prevent akmods crash
+  - type: script
+    snippets:
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
+
   # Install RPM packages, repos, and COPR packages
   - type: script
     scripts:
