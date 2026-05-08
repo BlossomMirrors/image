@@ -4,9 +4,11 @@ base-image: quay.io/fedora-ostree-desktops/kinoite
 image-version: 44
 
 modules:
-  # Try prevent akmods crash
+  # Disable SELinux check for DNF/RPM
   - type: script
     snippets:
+      - "mkdir -p /etc/selinux && touch /etc/selinux/config"
+      - "sed -i 's/selinux=1/selinux=0/g' /etc/selinux/config || true"
       - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
 
   # Install RPM packages, repos, and COPR packages
