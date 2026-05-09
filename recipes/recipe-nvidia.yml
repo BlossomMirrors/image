@@ -1,6 +1,6 @@
 name: blossomos-nvidia-open
 description: BlossomOS NVIDIA open kernel module variant
-base-image: quay.io/fedora-ostree-desktops/kinoite
+base-image: ghcr.io/ublue-os/kinoite-main
 image-version: 44
 
 modules:
