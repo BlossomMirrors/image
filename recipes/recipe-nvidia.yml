@@ -1,6 +1,6 @@
 name: blossomos-nvidia-open
 description: BlossomOS NVIDIA open kernel module variant
-base-image: ghcr.io/ublue-os/kinoite-main
+base-image: ghcr.io/ublue-os/kinoite-nvidia
 image-version: 44
 
 modules:
@@ -14,9 +14,8 @@ modules:
   # Install kernel from main akmods + NVIDIA open drivers + kernel modules
   - type: akmods
     base: main
-    nvidia-driver: nvidia-open
     install:
-      # - xone
+      - xone
       - openrazer
       - v4l2loopback
 

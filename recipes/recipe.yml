@@ -15,7 +15,7 @@ modules:
   - type: akmods
     base: main
     install:
-      # - xone
+      - xone
       - openrazer
       - v4l2loopback
 
