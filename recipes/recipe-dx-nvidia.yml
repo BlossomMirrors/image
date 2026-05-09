@@ -4,15 +4,10 @@ base-image: quay.io/fedora-ostree-desktops/kinoite
 image-version: 44
 
 modules:
-  # Disable SELinux check for DNF/RPM
-  - type: script
-    snippets:
-      - "mkdir -p /etc/selinux && touch /etc/selinux/config"
-      - "sed -i 's/selinux=1/selinux=0/g' /etc/selinux/config || true"
-      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
-
   # Install RPM packages, repos, and COPR packages
   - type: script
+    snippets:
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
     scripts:
       - 01-packages.sh
 
@@ -21,7 +16,7 @@ modules:
     base: main
     nvidia-driver: nvidia-open
     install:
-      - xone
+      # - xone
       - openrazer
       - v4l2loopback
 
@@ -33,6 +28,8 @@ modules:
 
   # Install developer tools: Docker, VSCode, QEMU/libvirt, COPR dev packages
   - type: script
+    snippets:
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
     scripts:
       - 00-dx.sh
 
@@ -43,11 +40,15 @@ modules:
 
   # Add BlossomOS-specific RPM packages and Flatpak remote
   - type: script
+    snippets:
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
     scripts:
       - 04-blossomos.sh
 
   # NVIDIA post-install: remove nouveau icd, add libnvidia-ml.so symlink, kargs
   - type: script
+    snippets:
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
     scripts:
       - 04-nvidia.sh
 
