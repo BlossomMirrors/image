@@ -12,7 +12,7 @@ systemctl enable --force plasmalogin.service
 systemctl enable plasma-setup.service
 systemctl enable rpm-ostree-countme.service
 systemctl enable tailscaled.service
-systemctl enable brew-setup.service
+systemctl enable brew-setup.service || true
 systemctl enable blossomos-groups.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
