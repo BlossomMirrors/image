@@ -14,6 +14,13 @@ IMAGE_VENDOR="${IMAGE_VENDOR:-blossomos}"
 FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-${OS_VERSION:-44}}"
 UBLUE_IMAGE_TAG="${UBLUE_IMAGE_TAG:-latest}"
 SHA_HEAD_SHORT="${SHA_HEAD_SHORT:-}"
+if [[ -z "${BASE_IMAGE_NAME:-}" ]]; then
+  if [[ "${IMAGE_NAME}" =~ nvidia ]]; then
+    BASE_IMAGE_NAME="kinoite-nvidia"
+  else
+    BASE_IMAGE_NAME="kinoite-main"
+  fi
+fi
 
 IMAGE_PRETTY_NAME="BlossomOS"
 IMAGE_LIKE="fedora"

@@ -45,7 +45,7 @@ rpm -e --nodeps --justdb generic-logos 2>/dev/null || true
 dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
-    arc \
+    blossom-arc \
     blossomos-kinfocenter \
     kwin-pen-cursor
 
