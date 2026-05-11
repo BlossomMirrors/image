@@ -33,7 +33,7 @@ podman push --digestfile "${DIGEST_FILE}" "${REMOTE_REF}"
 DIGEST="$(cat "${DIGEST_FILE}")"
 rm -f "${DIGEST_FILE}"
 
-REMOTE_DIGEST_REF="${REGISTRY}/${REGISTRY_ORG}/${IMAGE_NAME}@${DIGEST}"
+REMOTE_DIGEST_REF="${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}@${DIGEST}"
 echo "==> Pushed digest: ${DIGEST}"
 
 echo "==> Signing ${REMOTE_DIGEST_REF}"
