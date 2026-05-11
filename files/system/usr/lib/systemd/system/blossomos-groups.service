@@ -1,0 +1,11 @@
+[Unit]
+Description=BlossomOS Group Setup
+After=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-groups
+
+[Install]
+WantedBy=multi-user.target

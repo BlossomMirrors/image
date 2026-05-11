@@ -18,6 +18,18 @@ variables:
       from_secret: cosign_private_key
     COSIGN_PASSWORD: ""
     GITHUB_TOKEN: ""
+    BUILDAH_ISOLATION: chroot
+    STORAGE_DRIVER: overlay
+    STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
+
+  # Cleanup stale buildah state before building
+  - &buildah_cleanup buildah rm --all 2>/dev/null || true; buildah unshare -- rm -rf /var/tmp/buildah* 2>/dev/null || true
+
+  # Install the BlueBuild CLI into the PATH
+  - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
+
+  # Authenticate with the container registry before building/pushing
+  - &registry_login echo "$REGISTRY_HTTP_SECRET" | podman login $REGISTRY -u "$REGISTRY_USER" --password-stdin
 
 steps:
   # --- latest builds (all 4 run in parallel) ---
@@ -35,10 +47,10 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos latest main
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe.yml
       - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:latest
       - podman push git.blossomos.org/blossom/image:latest --digestfile /tmp/digest-base.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest@$(cat /tmp/digest-base.txt)"
@@ -56,10 +68,10 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos-dx latest main
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe-dx.yml
       - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:latest-dx
       - podman push git.blossomos.org/blossom/image:latest-dx --digestfile /tmp/digest-dx.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx@$(cat /tmp/digest-dx.txt)"
@@ -77,10 +89,10 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos latest nvidia-open
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe-nvidia.yml
       - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:latest-nvidia
       - podman push git.blossomos.org/blossom/image:latest-nvidia --digestfile /tmp/digest-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-nvidia@$(cat /tmp/digest-nvidia.txt)"
@@ -98,15 +110,15 @@ steps:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos-dx latest nvidia-open
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe-dx-nvidia.yml
       - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:latest-dx-nvidia
       - podman push git.blossomos.org/blossom/image:latest-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"
 
-  # --- main builds (all 4 run in parallel) ---
+  # --- main (release) builds — triggered manually ---
 
   - name: build-base-main
     image: ghcr.io/ublue-os/devcontainer:latest
@@ -116,13 +128,12 @@ steps:
       - event: manual
     environment:
       <<: *env
-      IMAGE_REF: "https://repo.blossomos.org/release/main/"
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos latest main
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe.yml
       - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:main
       - podman push git.blossomos.org/blossom/image:main --digestfile /tmp/digest-base.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main@$(cat /tmp/digest-base.txt)"
@@ -135,13 +146,12 @@ steps:
       - event: manual
     environment:
       <<: *env
-      IMAGE_REF: "https://repo.blossomos.org/release/main/"
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos-dx latest main
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe-dx.yml
       - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:main-dx
       - podman push git.blossomos.org/blossom/image:main-dx --digestfile /tmp/digest-dx.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-dx@$(cat /tmp/digest-dx.txt)"
@@ -154,13 +164,12 @@ steps:
       - event: manual
     environment:
       <<: *env
-      IMAGE_REF: "https://repo.blossomos.org/release/main/"
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos latest nvidia-open
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe-nvidia.yml
       - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:main-nvidia
       - podman push git.blossomos.org/blossom/image:main-nvidia --digestfile /tmp/digest-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-nvidia@$(cat /tmp/digest-nvidia.txt)"
@@ -173,13 +182,12 @@ steps:
       - event: manual
     environment:
       <<: *env
-      IMAGE_REF: "https://repo.blossomos.org/release/main/"
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
     commands:
-      - mkdir -p /root/.docker
-      - AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]')
-      - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
-      - just build blossomos-dx latest nvidia-open
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - bluebuild build recipes/recipe-dx-nvidia.yml
       - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:main-dx-nvidia
       - podman push git.blossomos.org/blossom/image:main-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:main-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"

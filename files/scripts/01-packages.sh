@@ -41,7 +41,7 @@ dnf5 distro-sync --skip-unavailable -y --repo='fedora-multimedia' "${OVERRIDES[@
 dnf5 versionlock add "${OVERRIDES[@]}"
 # All DNF-related operations should be done here whenever possible
 #shellcheck source=build_files/shared/copr-helpers.sh
-source /ctx/build_files/shared/copr-helpers.sh
+source "$CONFIG_DIRECTORY/scripts/copr-helpers.sh"
 
 # NOTE:
 # Packages are split into FEDORA_PACKAGES and COPR_PACKAGES to prevent
@@ -55,7 +55,9 @@ source /ctx/build_files/shared/copr-helpers.sh
 # https://github.com/ublue-os/aurora/issues/1227
 dnf5 versionlock add plasma-desktop
 
-mapfile -t FEDORA_PACKAGES < <(grep -v '^#\|^[[:space:]]*$' /ctx/build_files/base/packages.dnf)
+FEDORA_MAJOR_VERSION=$(rpm -E '%fedora')
+
+mapfile -t FEDORA_PACKAGES < <(grep -v '^#\|^[[:space:]]*$' $CONFIG_DIRECTORY/packages.dnf)
 
 # Version-specific Fedora package additions
 case "$FEDORA_MAJOR_VERSION" in
@@ -209,9 +211,9 @@ dnf5 -y --repo=copr:copr.fedorainfracloud.org:ublue-os:flatpak-test install flat
 dnf -y install \
     plasma-firewall-$(rpm -q --qf "%{VERSION}" plasma-desktop)
 
-# Install DX specific packages
-if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then
-  /ctx/build_files/dx/00-dx.sh
-fi
+# Install OpenRazer daemon (kmod is installed by the akmods module)
+dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
+dnf -y install openrazer-daemon || true
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
 echo "::endgroup::"

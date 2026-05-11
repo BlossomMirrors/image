@@ -5,3 +5,4 @@ output/
 /.bluebuild-scripts_*
 *.iso
 *.iso-CHECKSUM
+logs/*

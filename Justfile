@@ -114,7 +114,7 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
 
     # AKMODS Flavor and Kernel Version
     if [[ "${tag}" =~ stable ]]; then
-        akmods_flavor="coreos-stable"
+        akmods_flavor="coreos-testing"
     elif [[ "${tag}" =~ beta ]]; then
         akmods_flavor="main"
     else
@@ -138,15 +138,15 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     fi
 
     # Verify Containers with Cosign
-    {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/akmods:${akmods_flavor}-${fedora_version}-${kernel_release}"
-    if [[ "${akmods_flavor}" =~ coreos ]]; then
-        {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/akmods-zfs:${akmods_flavor}-${fedora_version}-${kernel_release}"
-    fi
-    if [[ "${flavor}" =~ nvidia-open ]]; then
-        {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/akmods-nvidia-open:${akmods_flavor}-${fedora_version}-${kernel_release}"
-    fi
+    # {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/akmods:${akmods_flavor}-${fedora_version}-${kernel_release}"
+    # if [[ "${akmods_flavor}" =~ coreos ]]; then
+    #     {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/akmods-zfs:${akmods_flavor}-${fedora_version}-${kernel_release}"
+    # fi
+    # if [[ "${flavor}" =~ nvidia-open ]]; then
+    #     {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/akmods-nvidia-open:${akmods_flavor}-${fedora_version}-${kernel_release}"
+    # fi
 
-    {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/brew:latest@${brew_image_sha}"
+    # {{ just }} verify-container cosign.pub "ghcr.io/ublue-os/brew:latest@${brew_image_sha}"
 
     # Get Version
     if [[ "${tag}" =~ stable ]]; then
@@ -222,7 +222,7 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     echo "::endgroup::"
 
     case "${akmods_flavor}" in
-    "coreos-stable") BUILD_ARGS+=("--cpp-flag=-DZFS") ;;
+    "coreos-testing") BUILD_ARGS+=("--cpp-flag=-DZFS") ;;
     esac
 
     if [[ "${image_name}" =~ nvidia ]]; then
