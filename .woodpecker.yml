@@ -29,7 +29,7 @@ variables:
   - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
 
   # Authenticate with the container registry before building/pushing
-  - &registry_login mkdir -p /root/.docker && env AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_HTTP_SECRET" | base64 | tr -d '[:space:]') && printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /root/.docker/config.json
+  - &registry_login echo "$REGISTRY_HTTP_SECRET" | podman login $REGISTRY -u "$REGISTRY_USER" --password-stdin
 
 steps:
   # --- latest builds (all 4 run in parallel) ---
