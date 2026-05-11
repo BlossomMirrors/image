@@ -11,14 +11,20 @@ modules:
     scripts:
       - 01-packages.sh
 
-  # Install kernel from main akmods + NVIDIA open drivers + kernel modules
+  # Install kernel from main akmods + kernel modules
   - type: akmods
     base: main
-    nvidia-driver: nvidia-open
     install:
       - xone
       - openrazer
       - v4l2loopback
+
+  # Install NVIDIA open drivers
+  - type: script
+    snippets:
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
+      - "rpm-ostree install akmod-nvidia-open xorg-x11-drv-nvidia-cuda"
+      - "rpm-ostree kargs --append=rd.driver.blacklist=nouveau --append=modprobe.blacklist=nouveau --append=nvidia-drm.modeset=1"
 
   # Copy shared system configuration files into the image
   - type: files
