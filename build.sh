@@ -5,12 +5,13 @@ IMAGE="${1:-blossomos}"
 TAG="${2:-latest}"
 FLAVOR="${3:-main}"
 
-REGISTRY="${REGISTRY:-registry.blossomos.org}"
-REGISTRY_ORG="${REGISTRY_ORG:-blossomos}"
+REGISTRY="${REGISTRY:-git.blossomos.org}"
+REGISTRY_ORG="${REGISTRY_ORG:-blossom}"
+REGISTRY_IMAGE="${REGISTRY_IMAGE:-image}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Derive image name the same way the Justfile does
+# Derive local image name the same way the Justfile does
 if [[ "${FLAVOR}" == "main" ]]; then
     IMAGE_NAME="${IMAGE}"
 else
@@ -18,7 +19,7 @@ else
 fi
 
 LOCAL_REF="localhost/${IMAGE_NAME}:${TAG}"
-REMOTE_REF="${REGISTRY}/${REGISTRY_ORG}/${IMAGE_NAME}:${TAG}"
+REMOTE_REF="${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${TAG}"
 
 echo "==> Building ${LOCAL_REF}"
 just build "${IMAGE}" "${TAG}" "${FLAVOR}"
