@@ -66,6 +66,33 @@ modules:
     scripts:
       - 18-image-info.sh
 
+  # Install Flatpak applications via systemd service on boot
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        install:
+          - org.libreoffice.LibreOffice
+          - org.mozilla.Thunderbird
+          - org.gimp.GIMP
+          - org.videolan.VLC
+          - net.displaycal.DisplayCAL
+          - it.mijorus.gearlever
+          - io.github.nokse22.Exhibit
+          - org.kde.kclock
+          - org.qbittorrent.qBittorrent
+          - com.rustdesk.RustDesk
+          - org.kde.knights
+          - org.kde.kpat
+          - org.kde.kmahjongg
+          - org.kde.kmines
+      - scope: system
+        repo:
+          name: blossomos
+          url: https://repo.blossomos.org/blossomos.flatpakrepo
+          title: BlossomOS
+        install:
+          - net.imput.helium
+
   # Rebuild initramfs for the installed kernel
   - type: script
     scripts:

@@ -4,23 +4,6 @@ echo "::group:: ===$(basename "$0")==="
 
 set -eoux pipefail
 
-# Enable Flathub
-flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-# Generate flatpak preinstall files from packages.flatpak
-# Format: <app_id> [remote]  — remote is optional, adds Origin= when specified
-mkdir -p /usr/share/flatpak/preinstall.d
-while read -r app_id remote; do
-    origin_line=""
-    [[ -n "${remote:-}" ]] && origin_line="Origin=${remote}"
-    cat > "/usr/share/flatpak/preinstall.d/${app_id}.preinstall" << EOF
-[Flatpak Preinstall ${app_id}]
-Branch=stable
-IsRuntime=false
-${origin_line}
-EOF
-done < <(grep -v '^#\|^[[:space:]]*$' $CONFIG_DIRECTORY/packages.flatpak)
-
 # Starship Shell Prompt
 curl "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-gnu.tar.gz" --retry 3 -Lo /tmp/starship.tar.gz
 curl "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-gnu.tar.gz.sha256" --retry 3 -Lo /tmp/starship.tar.gz.sha256
