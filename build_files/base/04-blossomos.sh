@@ -46,6 +46,7 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    blossomos-shellconfig \
     blossomos-kinfocenter \
     kwin-pen-cursor
 
