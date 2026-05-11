@@ -209,7 +209,7 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     LABELS+=("--label" "ostree.linux=${kernel_release}")
     LABELS+=("--label" "io.artifacthub.package.readme-url=https://git.blossomos.org/Blossom/image/raw/branch/main/README.md")
     LABELS+=("--label" "io.artifacthub.package.logo-url=https://blossomos.org/logo.png")
-    LABELS+=("--label" "org.opencontainers.image.description=BlossomOS - A beautiful KDE Plasma desktop")
+    LABELS+=("--label" "org.opencontainers.image.description=BlossomOS")
     LABELS+=("--label" "containers.bootc=1")
     LABELS+=("--label" "org.opencontainers.image.created=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)")
     LABELS+=("--label" "org.opencontainers.image.source=https://git.blossomos.org/Blossom/image/raw/branch/main/Containerfile.in")
