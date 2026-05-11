@@ -37,6 +37,6 @@ REMOTE_DIGEST_REF="${REGISTRY}/${REGISTRY_ORG}/${IMAGE_NAME}@${DIGEST}"
 echo "==> Pushed digest: ${DIGEST}"
 
 echo "==> Signing ${REMOTE_DIGEST_REF}"
-cosign sign --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
+COSIGN_PASSWORD="" cosign sign --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
 
 echo "==> Done: ${REMOTE_REF} (${DIGEST})"
