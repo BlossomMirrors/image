@@ -124,7 +124,7 @@ copr_install_isolated "lizardbyte/beta" \
 
 # Bibata cursor theme from peterwu/rendezvous COPR
 copr_install_isolated "peterwu/rendezvous" \
-    "bibata-cursor-theme"
+    "bibata-cursor-themes"
 
 # Packages to exclude - common to all versions
 EXCLUDED_PACKAGES=(
