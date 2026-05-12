@@ -46,10 +46,15 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    blossomui \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
     kwin-pen-cursor
+
+# Install blossomos-shellconfig dependencies from Fedora that aren't pulled
+# in automatically (rpm -i skips dep resolution)
+dnf5 -y install micro python3-pip
 
 # blossomos-shellconfig conflicts with bash/zsh over /etc/skel/.bashrc and
 # .zshrc; dnf5 has no --replacefiles flag so install via rpm directly
