@@ -124,6 +124,10 @@ copr_install_isolated "ledif/kairpods" \
 copr_install_isolated "lizardbyte/beta" \
     "sunshine"
 
+# Bibata cursor theme from muhalantabli/copr-repo COPR
+copr_install_isolated "muhalantabli/copr-repo" \
+    "bibata-cursor-theme"
+
 # Packages to exclude - common to all versions
 EXCLUDED_PACKAGES=(
     akonadi-server
