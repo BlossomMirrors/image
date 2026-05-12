@@ -85,7 +85,8 @@ modules:
           title: BlossomOS
         install:
           - net.imput.helium
-          - org.kde.KStyle.BlossomUI
+          - runtime/org.kde.KStyle.BlossomUI/x86_64/6.9
+          - runtime/org.kde.KStyle.BlossomUI/x86_64/5.15-24.08
 
   # Rebuild initramfs for the installed kernel
   - type: script
