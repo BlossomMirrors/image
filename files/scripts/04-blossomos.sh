@@ -44,14 +44,18 @@ rpm -e --nodeps --justdb generic-logos 2>/dev/null || true
 # Install BlossomOS RPM packages
 dnf5 -y install \
     --enablerepo="${REPO_ID}" \
-    --replacefiles \
     blossomos-branding \
     blossom-arc \
-    blossomos-shellconfig \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
     kwin-pen-cursor
+
+# blossomos-shellconfig conflicts with bash/zsh over /etc/skel/.bashrc and
+# .zshrc; dnf5 has no --replacefiles flag so install via rpm directly
+dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig
+rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm
+rm -rf /tmp/blossom
 
 # Add BlossomOS Flatpak remote
 curl -fsSL https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub -o /tmp/flatpak-repo-key.asc
