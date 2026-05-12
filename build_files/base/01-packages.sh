@@ -144,6 +144,7 @@ EXCLUDED_PACKAGES=(
     plasma-discover-kns
     plasma-discover-rpm-ostree
     plasma-welcome-fedora
+    plasma-welcome
     podman-docker
 )
 
