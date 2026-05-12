@@ -47,6 +47,8 @@ dnf5 -y install \
     blossomos-branding \
     blossom-arc \
     blossomos-shellconfig \
+    adjust \
+    pkglayer \
     blossomos-kinfocenter \
     kwin-pen-cursor
 
