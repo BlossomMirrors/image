@@ -46,6 +46,8 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    blossomui \
+    atuin \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
