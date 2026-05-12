@@ -44,6 +44,7 @@ rpm -e --nodeps --justdb generic-logos 2>/dev/null || true
 # Install BlossomOS RPM packages
 dnf5 -y install \
     --enablerepo="${REPO_ID}" \
+    --replacefiles \
     blossomos-branding \
     blossom-arc \
     blossomos-shellconfig \
