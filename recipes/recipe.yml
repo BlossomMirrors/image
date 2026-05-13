@@ -80,6 +80,12 @@ modules:
           - runtime/org.kde.KStyle.BlossomUI/x86_64/6.9
           - runtime/org.kde.KStyle.BlossomUI/x86_64/5.15-24.08
 
+  - type: os-release
+    properties:
+      ID: blossomos
+      NAME: BlossomOS
+      PRETTY_NAME: BlossomOS
+
   # Rebuild initramfs for the installed kernel
   - type: script
     scripts:

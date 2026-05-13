@@ -14,16 +14,6 @@ else
     REPO_NAME="BlossomOS Main (indev)"
 fi
 
-# rpm --rebuilddb cannot atomically rename in this container fs; manually place the rebuilt DB
-rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal
-rpm --rebuilddb 2>/dev/null || true
-REBUILD_DIR=$(ls -d /usr/share/rpmrebuilddb.* 2>/dev/null | sort -t. -k2 -n | tail -1)
-if [ -n "${REBUILD_DIR}" ]; then
-    cp -f "${REBUILD_DIR}"/rpmdb.sqlite /usr/share/rpm/rpmdb.sqlite
-    rm -rf "${REBUILD_DIR}"
-fi
-rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal
-
 # Import GPG key
 rpm --import https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub
 
@@ -51,7 +41,9 @@ dnf5 -y install \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
-    kwin-pen-cursor
+    kwin-pen-cursor \
+    micro \
+    python3-pip
 
 # blossomos-shellconfig conflicts with bash/zsh over /etc/skel/.bashrc and
 # .zshrc; dnf5 has no --replacefiles flag so install via rpm directly
@@ -65,16 +57,5 @@ flatpak remote-add --system --if-not-exists \
     --gpg-import=/tmp/flatpak-repo-key.asc \
     blossomos https://repo.blossomos.org/flatpak
 rm -f /tmp/flatpak-repo-key.asc
-
-# Rebuild RPM DB into a clean, WAL-free state before committing the layer.
-# Do NOT remove WAL/SHM first — rpm --rebuilddb must read them to get the
-# full post-dnf5 package set. Only clean up after the new DB is in place.
-rpm --rebuilddb 2>/dev/null || true
-REBUILD_DIR=$(ls -d /usr/share/rpmrebuilddb.* 2>/dev/null | sort -t. -k2 -n | tail -1)
-if [ -n "${REBUILD_DIR}" ]; then
-    cp -f "${REBUILD_DIR}"/rpmdb.sqlite /usr/share/rpm/rpmdb.sqlite
-    rm -rf "${REBUILD_DIR}"
-fi
-rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal
 
 echo "::endgroup::"

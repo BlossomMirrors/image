@@ -28,14 +28,4 @@ mkdir -p /usr/lib/systemd/system-generators
 curl "https://raw.githubusercontent.com/coreos/fedora-coreos-config/refs/heads/stable/overlay.d/05core/usr/lib/systemd/system-generators/coreos-sulogin-force-generator" --retry 3 -Lo /usr/lib/systemd/system-generators/coreos-sulogin-force-generator
 chmod +x /usr/lib/systemd/system-generators/coreos-sulogin-force-generator
 
-# rpm --rebuilddb cannot atomically rename in this container fs; manually place the rebuilt DB
-rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal
-rpm --rebuilddb 2>/dev/null || true
-REBUILD_DIR=$(ls -d /usr/share/rpmrebuilddb.* 2>/dev/null | sort -t. -k2 -n | tail -1)
-if [ -n "${REBUILD_DIR}" ]; then
-    cp -f "${REBUILD_DIR}"/rpmdb.sqlite /usr/share/rpm/rpmdb.sqlite
-    rm -rf "${REBUILD_DIR}"
-fi
-rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal
-
 echo "::endgroup::"
