@@ -23,13 +23,16 @@ variables:
     STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
 
   # Cleanup stale buildah state before building
-  - &buildah_cleanup buildah rm --all 2>/dev/null || true; buildah unshare -- sh -c 'rm -rf /var/tmp/buildah* .bluebuild-scripts_*; chown 0:0 .' 2>/dev/null || true
+  - &buildah_cleanup buildah rm --all 2>/dev/null || true; buildah unshare -- sh -c 'rm -rf /var/tmp/buildah*' 2>/dev/null || true
 
   # Install the BlueBuild CLI into the PATH
   - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
 
   # Authenticate with the container registry before building/pushing
   - &registry_login echo "$REGISTRY_HTTP_SECRET" | podman login $REGISTRY -u "$REGISTRY_USER" --password-stdin
+
+  # Create an isolated git worktree so parallel builds don't share the same temp dir
+  - &worktree_setup WORKTREE=$(mktemp -u /tmp/bb-XXXXXXXX) && git worktree add "$WORKTREE" HEAD && cd "$WORKTREE"
 
 steps:
   # --- latest builds (all 4 run in parallel) ---
@@ -50,6 +53,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe.yml
       - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:latest
       - podman push git.blossomos.org/blossom/image:latest --digestfile /tmp/digest-base.txt
@@ -71,6 +75,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe-dx.yml
       - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:latest-dx
       - podman push git.blossomos.org/blossom/image:latest-dx --digestfile /tmp/digest-dx.txt
@@ -92,6 +97,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe-nvidia.yml
       - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:latest-nvidia
       - podman push git.blossomos.org/blossom/image:latest-nvidia --digestfile /tmp/digest-nvidia.txt
@@ -113,6 +119,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe-dx-nvidia.yml
       - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:latest-dx-nvidia
       - podman push git.blossomos.org/blossom/image:latest-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
@@ -151,6 +158,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe-dx.yml
       - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:main-dx
       - podman push git.blossomos.org/blossom/image:main-dx --digestfile /tmp/digest-dx.txt
@@ -169,6 +177,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe-nvidia.yml
       - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:main-nvidia
       - podman push git.blossomos.org/blossom/image:main-nvidia --digestfile /tmp/digest-nvidia.txt
@@ -187,6 +196,7 @@ steps:
       - *buildah_cleanup
       - *install_bluebuild
       - *registry_login
+      - *worktree_setup
       - bluebuild build recipes/recipe-dx-nvidia.yml
       - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:main-dx-nvidia
       - podman push git.blossomos.org/blossom/image:main-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
