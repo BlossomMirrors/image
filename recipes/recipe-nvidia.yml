@@ -21,7 +21,9 @@ modules:
 
   # Install NVIDIA open kernel module and userspace drivers via akmods module
   - type: akmods
-    base: nvidia-open
+    base: main
+    nvidia-driver: nvidia-open
+    install: []
 
   # Copy shared system configuration files into the image
   - type: files

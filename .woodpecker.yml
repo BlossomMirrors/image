@@ -23,7 +23,7 @@ variables:
     STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
 
   # Cleanup stale buildah state before building
-  - &buildah_cleanup buildah rm --all 2>/dev/null || true; buildah unshare -- sh -c 'rm -rf /var/tmp/buildah* .bluebuild-scripts_*' 2>/dev/null || true
+  - &buildah_cleanup buildah rm --all 2>/dev/null || true; buildah unshare -- sh -c 'rm -rf /var/tmp/buildah* .bluebuild-scripts_*; chown 0:0 .' 2>/dev/null || true
 
   # Install the BlueBuild CLI into the PATH
   - &install_bluebuild curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
