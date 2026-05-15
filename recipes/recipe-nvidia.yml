@@ -19,6 +19,11 @@ modules:
       - openrazer
       - v4l2loopback
 
+  # Clean up stale SELinux sandbox left by the previous akmods run
+  - type: script
+    snippets:
+      - "rm -rf /etc/selinux/targeted/tmp"
+
   # Install NVIDIA open kernel module and userspace drivers via akmods module
   - type: akmods
     base: main
