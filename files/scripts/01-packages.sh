@@ -93,8 +93,15 @@ dnf -y install --enablerepo='tailscale-stable' tailscale
 
 # Install netbird from their official repo
 echo "Installing netbird from official repo..."
-dnf config-manager addrepo --from-repofile=https://pkgs.netbird.io/yum/netbird.repo
-dnf config-manager setopt netbird.enabled=0
+tee /etc/yum.repos.d/netbird.repo <<'EOF'
+[netbird]
+name=netbird
+baseurl=https://pkgs.netbird.io/yum/
+enabled=0
+gpgcheck=1
+gpgkey=https://pkgs.netbird.io/yum/repodata/repomd.xml.key
+repo_gpgcheck=1
+EOF
 dnf -y install --enablerepo='netbird' netbird
 
 # Install COPR packages using isolated enablement (secure)
