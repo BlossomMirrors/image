@@ -32,6 +32,7 @@ dnf5 -y install \
     blossomos-branding \
     blossom-arc \
     blossomui \
+    blossom-sound-theme \
     atuin \
     adjust \
     pkglayer \
