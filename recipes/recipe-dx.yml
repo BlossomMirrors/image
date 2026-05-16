@@ -43,6 +43,7 @@ modules:
       - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
     scripts:
       - 04-blossomos.sh
+      - 05-blossomos-dx.sh
 
   # Override installs: remove chsh, compile gschemas, Samba setup
   - type: script

@@ -123,7 +123,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=tmpfs,dst=/var \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache/libdnf5 \
-    /ctx/build_files/base/04-blossomos.sh
+    /ctx/build_files/base/04-blossomos.sh && \
+    { [[ "${IMAGE_FLAVOR}" != "dx" ]] || /ctx/build_files/base/05-blossomos-dx.sh; }
 
 # /* Everything that can be done offline after things are in place should be done here */
 RUN --network=none \
