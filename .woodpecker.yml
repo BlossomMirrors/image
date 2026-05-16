@@ -48,7 +48,7 @@ steps:
         cron: daily-build
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -70,7 +70,7 @@ steps:
         cron: daily-build
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -92,7 +92,7 @@ steps:
         cron: daily-build
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -114,7 +114,7 @@ steps:
         cron: daily-build
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/indev/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -135,7 +135,7 @@ steps:
       - event: manual
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -153,7 +153,7 @@ steps:
       - event: manual
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -172,7 +172,7 @@ steps:
       - event: manual
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild
@@ -191,7 +191,7 @@ steps:
       - event: manual
     environment:
       <<: *env
-      BLOSSOM_REPO_URL: "https://repo.blossomos.org/release/main/"
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
     commands:
       - *buildah_cleanup
       - *install_bluebuild

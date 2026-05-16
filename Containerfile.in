@@ -41,7 +41,7 @@ ARG UBLUE_IMAGE_TAG="latest"
 ARG VERSION=""
 ARG IMAGE_FLAVOR=""
 ARG IMAGE_REF=""
-ARG BLOSSOM_REPO_URL="https://repo.blossomos.org/indev/main/"
+ARG BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm/"
 
 # /* so curl wrapper is available to all later RUNs */
 ENV PATH="/tmp/scripts/helpers:${PATH}"

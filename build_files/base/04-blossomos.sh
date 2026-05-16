@@ -4,15 +4,10 @@ echo "::group:: ===$(basename "$0")==="
 
 set -ouex pipefail
 
-BLOSSOM_REPO_URL="${BLOSSOM_REPO_URL:-https://repo.blossomos.org/indev/main/}"
+BLOSSOM_REPO_URL="${BLOSSOM_REPO_URL:-https://repo.blossomos.org/rpm/}"
 
-if [[ "$BLOSSOM_REPO_URL" =~ /release/ ]]; then
-    REPO_ID="blossomos-main"
-    REPO_NAME="BlossomOS Main"
-else
-    REPO_ID="blossomos-main-indev"
-    REPO_NAME="BlossomOS Main (indev)"
-fi
+REPO_ID="blossomos-main"
+REPO_NAME="BlossomOS Main"
 
 # Import GPG key
 rpm --import https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub
