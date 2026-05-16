@@ -89,6 +89,12 @@ dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fed
 dnf config-manager setopt tailscale-stable.enabled=0
 dnf -y install --enablerepo='tailscale-stable' tailscale
 
+# Install netbird from their official repo
+echo "Installing netbird from official repo..."
+dnf config-manager addrepo --from-repofile=https://pkgs.netbird.io/yum/netbird.repo
+dnf config-manager setopt netbird.enabled=0
+dnf -y install --enablerepo='netbird' netbird
+
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
 
