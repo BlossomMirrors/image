@@ -100,7 +100,9 @@ gpgcheck=1
 gpgkey=https://pkgs.netbird.io/yum/repodata/repomd.xml.key
 repo_gpgcheck=1
 EOF
-dnf -y install --enablerepo='netbird' netbird
+dnf5 download --destdir=/tmp/netbird --enablerepo='netbird' netbird
+rpm -i --noscripts /tmp/netbird/netbird*.rpm
+rm -rf /tmp/netbird
 
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
