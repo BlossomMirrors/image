@@ -1,10 +1,12 @@
 ---
 when:
   - event: push
-    branch: main
+    branch:
+      - main
+      - prerelease
+      - release
   - event: cron
     cron: daily-build
-  - event: manual
 
 variables:
   - &registry "git.blossomos.org"
@@ -125,14 +127,97 @@ steps:
       - podman push git.blossomos.org/blossom/image:latest-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
       - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:latest-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"
 
-  # --- main (release) builds — triggered manually ---
+  # --- prerelease builds — triggered on push to prerelease branch ---
+
+  - name: build-base-prerelease
+    image: ghcr.io/ublue-os/devcontainer:latest
+    privileged: true
+    depends_on: []
+    when:
+      - event: push
+        branch: prerelease
+    environment:
+      <<: *env
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
+    commands:
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - *worktree_setup
+      - bluebuild build recipes/recipe.yml
+      - podman tag localhost/blossomos:latest git.blossomos.org/blossom/image:prerelease
+      - podman push git.blossomos.org/blossom/image:prerelease --digestfile /tmp/digest-base.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:prerelease@$(cat /tmp/digest-base.txt)"
+
+  - name: build-dx-prerelease
+    image: ghcr.io/ublue-os/devcontainer:latest
+    privileged: true
+    depends_on: []
+    when:
+      - event: push
+        branch: prerelease
+    environment:
+      <<: *env
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
+    commands:
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - *worktree_setup
+      - bluebuild build recipes/recipe-dx.yml
+      - podman tag localhost/blossomos-dx:latest git.blossomos.org/blossom/image:prerelease-dx
+      - podman push git.blossomos.org/blossom/image:prerelease-dx --digestfile /tmp/digest-dx.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:prerelease-dx@$(cat /tmp/digest-dx.txt)"
+
+  - name: build-nvidia-prerelease
+    image: ghcr.io/ublue-os/devcontainer:latest
+    privileged: true
+    depends_on: []
+    when:
+      - event: push
+        branch: prerelease
+    environment:
+      <<: *env
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
+    commands:
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - *worktree_setup
+      - bluebuild build recipes/recipe-nvidia.yml
+      - podman tag localhost/blossomos-nvidia-open:latest git.blossomos.org/blossom/image:prerelease-nvidia
+      - podman push git.blossomos.org/blossom/image:prerelease-nvidia --digestfile /tmp/digest-nvidia.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:prerelease-nvidia@$(cat /tmp/digest-nvidia.txt)"
+
+  - name: build-dx-nvidia-prerelease
+    image: ghcr.io/ublue-os/devcontainer:latest
+    privileged: true
+    depends_on: []
+    when:
+      - event: push
+        branch: prerelease
+    environment:
+      <<: *env
+      BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
+    commands:
+      - *buildah_cleanup
+      - *install_bluebuild
+      - *registry_login
+      - *worktree_setup
+      - bluebuild build recipes/recipe-dx-nvidia.yml
+      - podman tag localhost/blossomos-dx-nvidia-open:latest git.blossomos.org/blossom/image:prerelease-dx-nvidia
+      - podman push git.blossomos.org/blossom/image:prerelease-dx-nvidia --digestfile /tmp/digest-dx-nvidia.txt
+      - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "git.blossomos.org/blossom/image:prerelease-dx-nvidia@$(cat /tmp/digest-dx-nvidia.txt)"
+
+  # --- main (release) builds — triggered on push to release branch ---
 
   - name: build-base-main
     image: ghcr.io/ublue-os/devcontainer:latest
     privileged: true
     depends_on: []
     when:
-      - event: manual
+      - event: push
+        branch: release
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -150,7 +235,8 @@ steps:
     privileged: true
     depends_on: []
     when:
-      - event: manual
+      - event: push
+        branch: release
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -169,7 +255,8 @@ steps:
     privileged: true
     depends_on: []
     when:
-      - event: manual
+      - event: push
+        branch: release
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -188,7 +275,8 @@ steps:
     privileged: true
     depends_on: []
     when:
-      - event: manual
+      - event: push
+        branch: release
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
