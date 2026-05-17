@@ -100,9 +100,29 @@ gpgcheck=1
 gpgkey=https://pkgs.netbird.io/yum/repodata/repomd.xml.key
 repo_gpgcheck=1
 EOF
-dnf5 download --destdir=/tmp/netbird --enablerepo='netbird' netbird
+dnf5 download --destdir=/tmp/netbird --arch="$(rpm -E '%_arch')" --enablerepo='netbird' netbird
 rpm -i --noscripts /tmp/netbird/netbird*.rpm
 rm -rf /tmp/netbird
+# netbird service install (run by %post) is skipped above because it tries to
+# start the daemon in the build context. Write the unit file it would generate.
+cat > /usr/lib/systemd/system/netbird.service <<'EOF'
+[Unit]
+Description=NetBird mesh network client
+ConditionFileIsExecutable=/usr/bin/netbird
+After=network.target syslog.target
+
+[Service]
+StartLimitInterval=5
+StartLimitBurst=10
+ExecStart=/usr/bin/netbird "service" "run" "--log-level" "info" "--daemon-addr" "unix:///var/run/netbird.sock" "--log-file" "/var/log/netbird/client.log"
+Restart=always
+RestartSec=120
+EnvironmentFile=-/etc/sysconfig/netbird
+Environment=SYSTEMD_UNIT=netbird
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
