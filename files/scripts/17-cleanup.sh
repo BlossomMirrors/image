@@ -36,6 +36,9 @@ done
 
 systemctl disable flatpak-add-fedora-repos.service
 
+# Remove KCM Updates plugin so it doesn't appear in System Settings
+rm -f /usr/lib64/qt6/plugins/plasma/kcms/systemsettings/kcm_updates.so
+
 # NOTE: With isolated COPR installation, most repos are never enabled globally.
 # We only need to clean up repos that were enabled during the build process.
 
