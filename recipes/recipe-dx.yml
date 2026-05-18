@@ -79,6 +79,9 @@ modules:
           - org.kde.kpat
           - org.kde.kmahjongg
           - org.kde.kmines
+          - org.kde.gwenview
+          - org.kde.kalk
+          - org.kde.kweather
       - scope: system
         repo:
           name: blossomos
