@@ -93,7 +93,6 @@ dnf -y install --enablerepo='tailscale-stable' tailscale
 
 # Install netbird from their official repo
 echo "Installing netbird from official repo..."
-rpm --import https://pkgs.netbird.io/yum/repodata/repomd.xml.key
 tee /etc/yum.repos.d/netbird.repo <<'EOF'
 [netbird]
 name=netbird
@@ -101,7 +100,7 @@ baseurl=https://pkgs.netbird.io/yum/
 enabled=0
 gpgcheck=1
 gpgkey=https://pkgs.netbird.io/yum/repodata/repomd.xml.key
-repo_gpgcheck=1
+repo_gpgcheck=0
 EOF
 dnf5 download --destdir=/tmp/netbird --arch="$(rpm -E '%_arch')" --enablerepo='netbird' netbird
 rpm -i --noscripts /tmp/netbird/netbird*.rpm
