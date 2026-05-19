@@ -19,12 +19,25 @@ modules:
       - openrazer
       - v4l2loopback
 
-  # Install NVIDIA open drivers
+  # Clean up stale SELinux sandbox and wrap semodule (see recipe-nvidia.yml for full rationale)
   - type: script
     snippets:
-      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
-      - "rpm-ostree install akmod-nvidia-open xorg-x11-drv-nvidia-cuda"
-      - "rpm-ostree kargs --append=rd.driver.blacklist=nouveau --append=modprobe.blacklist=nouveau --append=nvidia-drm.modeset=1"
+      - |
+        rm -rf /etc/selinux/targeted/tmp
+        mv /usr/sbin/semodule /usr/sbin/semodule.real
+        printf '#!/bin/bash\nrm -rf /etc/selinux/targeted/tmp\n/usr/sbin/semodule.real "$@" || true\n' > /usr/sbin/semodule
+        chmod +x /usr/sbin/semodule
+
+  # Install NVIDIA open kernel module and userspace drivers via akmods module
+  - type: akmods
+    base: main
+    nvidia-driver: nvidia-open
+    install: []
+
+  # Restore real semodule after NVIDIA akmods
+  - type: script
+    snippets:
+      - "[ -f /usr/sbin/semodule.real ] && mv /usr/sbin/semodule.real /usr/sbin/semodule || true"
 
   # Copy shared system configuration files into the image
   - type: files
