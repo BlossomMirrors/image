@@ -19,16 +19,29 @@ modules:
       - openrazer
       - v4l2loopback
 
-  # Clean up stale SELinux sandbox left by the previous akmods run
+  # Clean up stale SELinux sandbox left by the previous akmods run, then wrap
+  # semodule so every invocation (including RPM scriptlets) clears tmp first.
+  # RPM post-install scriptlets inside the nvidia-open akmods step create
+  # /etc/selinux/targeted/tmp and can leave it behind; the explicit semodule
+  # call at the end of the akmods module then fails with "File exists".
   - type: script
     snippets:
-      - "rm -rf /etc/selinux/targeted/tmp"
+      - |
+        rm -rf /etc/selinux/targeted/tmp
+        mv /usr/sbin/semodule /usr/sbin/semodule.real
+        printf '#!/bin/bash\nrm -rf /etc/selinux/targeted/tmp\nexec /usr/sbin/semodule.real "$@"\n' > /usr/sbin/semodule
+        chmod +x /usr/sbin/semodule
 
   # Install NVIDIA open kernel module and userspace drivers via akmods module
   - type: akmods
     base: main
     nvidia-driver: nvidia-open
     install: []
+
+  # Restore real semodule after NVIDIA akmods
+  - type: script
+    snippets:
+      - "[ -f /usr/sbin/semodule.real ] && mv /usr/sbin/semodule.real /usr/sbin/semodule || true"
 
   # Copy shared system configuration files into the image
   - type: files
