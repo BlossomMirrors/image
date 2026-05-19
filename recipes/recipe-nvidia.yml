@@ -19,17 +19,19 @@ modules:
       - openrazer
       - v4l2loopback
 
-  # Clean up stale SELinux sandbox left by the previous akmods run, then wrap
-  # semodule so every invocation (including RPM scriptlets) clears tmp first.
-  # RPM post-install scriptlets inside the nvidia-open akmods step create
-  # /etc/selinux/targeted/tmp and can leave it behind; the explicit semodule
-  # call at the end of the akmods module then fails with "File exists".
+  # Wrap semodule so sandbox errors don't abort the build.
+  # In an ostree/bootc container build /sys/fs/selinux is not mounted, so
+  # semodule cannot load policy into a running kernel anyway.  libsemanage uses
+  # hardlinks to build its sandbox and this fails with EEXIST on overlay
+  # filesystems regardless of whether we pre-clean /etc/selinux/targeted/tmp.
+  # The .pp file is on disk; the real module load happens on first boot.
+  # NOTE: exec is intentionally absent so the shell can catch the exit code.
   - type: script
     snippets:
       - |
         rm -rf /etc/selinux/targeted/tmp
         mv /usr/sbin/semodule /usr/sbin/semodule.real
-        printf '#!/bin/bash\nrm -rf /etc/selinux/targeted/tmp\nexec /usr/sbin/semodule.real "$@"\n' > /usr/sbin/semodule
+        printf '#!/bin/bash\nrm -rf /etc/selinux/targeted/tmp\n/usr/sbin/semodule.real "$@" || true\n' > /usr/sbin/semodule
         chmod +x /usr/sbin/semodule
 
   # Install NVIDIA open kernel module and userspace drivers via akmods module
