@@ -89,6 +89,12 @@ modules:
       NAME: BlossomOS
       PRETTY_NAME: BlossomOS
 
+  # Overwrite .desktop files
+  - type: files
+    files:
+      - source: desktop_files
+        destination: /usr/share/applications/
+
   # Rebuild initramfs for the installed kernel
   - type: script
     scripts:
