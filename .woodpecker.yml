@@ -7,6 +7,7 @@ when:
       - release
   - event: cron
     cron: daily-build
+  - event: manual
 
 variables:
   - &registry "git.blossomos.org"
@@ -52,6 +53,8 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
+      - event: manual
+        branch: main
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -74,6 +77,8 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
+      - event: manual
+        branch: main
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -96,6 +101,8 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
+      - event: manual
+        branch: main
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -118,6 +125,8 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
+      - event: manual
+        branch: main
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -140,6 +149,8 @@ steps:
     when:
       - event: push
         branch: prerelease
+      - event: manual
+        branch: prerelease
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -159,6 +170,8 @@ steps:
     depends_on: []
     when:
       - event: push
+        branch: prerelease
+      - event: manual
         branch: prerelease
     environment:
       <<: *env
@@ -180,6 +193,8 @@ steps:
     when:
       - event: push
         branch: prerelease
+      - event: manual
+        branch: prerelease
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -199,6 +214,8 @@ steps:
     depends_on: []
     when:
       - event: push
+        branch: prerelease
+      - event: manual
         branch: prerelease
     environment:
       <<: *env
@@ -222,6 +239,8 @@ steps:
     when:
       - event: push
         branch: release
+      - event: manual
+        branch: release
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -240,6 +259,8 @@ steps:
     depends_on: []
     when:
       - event: push
+        branch: release
+      - event: manual
         branch: release
     environment:
       <<: *env
@@ -261,6 +282,8 @@ steps:
     when:
       - event: push
         branch: release
+      - event: manual
+        branch: release
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -280,6 +303,8 @@ steps:
     depends_on: []
     when:
       - event: push
+        branch: release
+      - event: manual
         branch: release
     environment:
       <<: *env
