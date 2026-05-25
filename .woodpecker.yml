@@ -53,8 +53,7 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
-      - event: manual
-        branch: main
+      - evaluate: 'CI_PIPELINE_EVENT == "manual" && CI_COMMIT_BRANCH != "prerelease" && CI_COMMIT_BRANCH != "release"'
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -77,8 +76,7 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
-      - event: manual
-        branch: main
+      - evaluate: 'CI_PIPELINE_EVENT == "manual" && CI_COMMIT_BRANCH != "prerelease" && CI_COMMIT_BRANCH != "release"'
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -101,8 +99,7 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
-      - event: manual
-        branch: main
+      - evaluate: 'CI_PIPELINE_EVENT == "manual" && CI_COMMIT_BRANCH != "prerelease" && CI_COMMIT_BRANCH != "release"'
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -125,8 +122,7 @@ steps:
         branch: main
       - event: cron
         cron: daily-build
-      - event: manual
-        branch: main
+      - evaluate: 'CI_PIPELINE_EVENT == "manual" && CI_COMMIT_BRANCH != "prerelease" && CI_COMMIT_BRANCH != "release"'
     environment:
       <<: *env
       BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
