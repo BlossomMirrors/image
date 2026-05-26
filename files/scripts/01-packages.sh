@@ -247,9 +247,4 @@ dnf5 -y --repo=copr:copr.fedorainfracloud.org:ublue-os:flatpak-test install flat
 dnf -y install \
     plasma-firewall-$(rpm -q --qf "%{VERSION}" plasma-desktop)
 
-# Install OpenRazer daemon (kmod is installed by the akmods module)
-dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
-dnf -y install openrazer-daemon || true
-sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
-
 echo "::endgroup::"
