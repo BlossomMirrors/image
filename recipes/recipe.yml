@@ -92,7 +92,7 @@ modules:
   # Overwrite .desktop files
   - type: files
     files:
-      - source: desktop_files
+      - source: desktop
         destination: /usr/share/applications/
 
   # Rebuild initramfs for the installed kernel
