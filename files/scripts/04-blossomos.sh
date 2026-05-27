@@ -41,6 +41,11 @@ dnf5 -y install \
     micro \
     python3-pip
 
+# Install OpenRazer daemon (kmod is installed by the akmods module)
+dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
+dnf -y install openrazer-daemon || true
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
+
 # blossomos-shellconfig conflicts with bash/zsh over /etc/skel/.bashrc and
 # .zshrc; dnf5 has no --replacefiles flag so install via rpm directly
 dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig
