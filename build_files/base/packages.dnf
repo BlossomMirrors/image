@@ -186,3 +186,11 @@ xournalpp
 
 # Misc Libraries
 libarchive
+
+# PIM and Calendar
+kdepim-addons
+kaccounts-integration
+kaccounts-providers
+merkuro
+kdepim-runtime
+akonadi-search

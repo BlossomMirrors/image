@@ -165,8 +165,6 @@ copr_install_isolated "peterwu/rendezvous" \
 
 # Packages to exclude - common to all versions
 EXCLUDED_PACKAGES=(
-    akonadi-server
-    akonadi-server-mysql
     sddm
     default-fonts-cjk-sans
     fedora-bookmarks
@@ -187,6 +185,7 @@ EXCLUDED_PACKAGES=(
     plasma-welcome-fedora
     plasma-welcome
     podman-docker
+    kaddressbook
 )
 
 # Version-specific package exclusions
