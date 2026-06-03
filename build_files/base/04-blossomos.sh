@@ -32,7 +32,6 @@ dnf5 -y install \
     blossomos-branding \
     blossom-arc \
     blossomui \
-    atuin \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
