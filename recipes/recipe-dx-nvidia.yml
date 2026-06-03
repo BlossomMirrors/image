@@ -96,7 +96,6 @@ modules:
           - org.gimp.GIMP
           - org.videolan.VLC
           - net.displaycal.DisplayCAL
-          - it.mijorus.gearlever
           - io.github.nokse22.Exhibit
           - org.kde.kclock
           - org.qbittorrent.qBittorrent
