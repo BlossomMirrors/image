@@ -35,7 +35,8 @@ dnf5 -y install \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
-    kwin-pen-cursor
+    kwin-pen-cursor \
+    atuin
 
 # Install blossomos-shellconfig dependencies from Fedora that aren't pulled
 # in automatically (rpm -i skips dep resolution)

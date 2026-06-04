@@ -33,6 +33,7 @@ dnf5 -y install \
     blossom-arc \
     blossomui \
     blossom-sound-theme \
+    atuin \
     umu-launcher \
     adjust \
     pkglayer \
