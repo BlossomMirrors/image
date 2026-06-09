@@ -65,7 +65,7 @@ build-dx-nvidia-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - bluebuild build --push --no-sign --registry-namespace $CI_PROJECT_PATH recipes/recipe-dx-nvidia.yml
+    - bluebuild build --push --no-sign recipes/recipe-dx-nvidia.yml
     - podman tag localhost/blossomos-dx-nvidia-open:latest $CI_REGISTRY_IMAGE:latest-dx-nvidia
     - podman push $CI_REGISTRY_IMAGE:latest-dx-nvidia --digestfile /tmp/digest.txt
     - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:latest-dx-nvidia@$(cat /tmp/digest.txt)"
@@ -107,7 +107,7 @@ build-dx-nvidia-prerelease:
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - bluebuild build --push --no-sign --registry-namespace $CI_PROJECT_PATH recipes/recipe-dx-nvidia.yml
+    - bluebuild build --push --no-sign recipes/recipe-dx-nvidia.yml
     - podman tag localhost/blossomos-dx-nvidia-open:latest $CI_REGISTRY_IMAGE:prerelease-dx-nvidia
     - podman push $CI_REGISTRY_IMAGE:prerelease-dx-nvidia --digestfile /tmp/digest.txt
     - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:prerelease-dx-nvidia@$(cat /tmp/digest.txt)"
@@ -149,7 +149,7 @@ build-dx-nvidia-release:
   rules:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - bluebuild build --push --no-sign --registry-namespace $CI_PROJECT_PATH recipes/recipe-dx-nvidia.yml
+    - bluebuild build --push --no-sign recipes/recipe-dx-nvidia.yml
     - podman tag localhost/blossomos-dx-nvidia-open:latest $CI_REGISTRY_IMAGE:main-dx-nvidia
     - podman push $CI_REGISTRY_IMAGE:main-dx-nvidia --digestfile /tmp/digest.txt
     - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:main-dx-nvidia@$(cat /tmp/digest.txt)"
