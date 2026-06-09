@@ -12,8 +12,6 @@ variables:
 .build_base:
   stage: build
   image: ghcr.io/ublue-os/devcontainer:latest
-  tags:
-    - privileged
   before_script:
     - buildah rm --all 2>/dev/null || true
     - buildah unshare -- sh -c 'rm -rf /var/tmp/buildah*' 2>/dev/null || true
