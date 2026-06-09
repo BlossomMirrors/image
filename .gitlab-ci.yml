@@ -1,0 +1,156 @@
+stages:
+  - build
+
+variables:
+  BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
+  BUILDAH_ISOLATION: chroot
+  STORAGE_DRIVER: overlay
+  STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
+  COSIGN_PASSWORD: ""
+  GITHUB_TOKEN: ""
+
+.build_base:
+  stage: build
+  image: ghcr.io/ublue-os/devcontainer:latest
+  tags:
+    - privileged
+  before_script:
+    - buildah rm --all 2>/dev/null || true
+    - buildah unshare -- sh -c 'rm -rf /var/tmp/buildah*' 2>/dev/null || true
+    - curl -fsSL https://raw.githubusercontent.com/blue-build/cli/main/install.sh | bash
+    - echo "$CI_REGISTRY_PASSWORD" | podman login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    - echo "$CI_REGISTRY_PASSWORD" | cosign login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+
+# latest (main branch + schedule + manual)
+
+build-base-latest:
+  extends: .build_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe.yml
+    - podman tag localhost/blossomos:latest $CI_REGISTRY_IMAGE:latest
+    - podman push $CI_REGISTRY_IMAGE:latest --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:latest@$(cat /tmp/digest.txt)"
+
+build-dx-latest:
+  extends: .build_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-dx.yml
+    - podman tag localhost/blossomos-dx:latest $CI_REGISTRY_IMAGE:latest-dx
+    - podman push $CI_REGISTRY_IMAGE:latest-dx --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:latest-dx@$(cat /tmp/digest.txt)"
+
+build-nvidia-latest:
+  extends: .build_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-nvidia.yml
+    - podman tag localhost/blossomos-nvidia-open:latest $CI_REGISTRY_IMAGE:latest-nvidia
+    - podman push $CI_REGISTRY_IMAGE:latest-nvidia --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:latest-nvidia@$(cat /tmp/digest.txt)"
+
+build-dx-nvidia-latest:
+  extends: .build_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-dx-nvidia.yml
+    - podman tag localhost/blossomos-dx-nvidia-open:latest $CI_REGISTRY_IMAGE:latest-dx-nvidia
+    - podman push $CI_REGISTRY_IMAGE:latest-dx-nvidia --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:latest-dx-nvidia@$(cat /tmp/digest.txt)"
+
+# prerelease
+
+build-base-prerelease:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe.yml
+    - podman tag localhost/blossomos:latest $CI_REGISTRY_IMAGE:prerelease
+    - podman push $CI_REGISTRY_IMAGE:prerelease --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:prerelease@$(cat /tmp/digest.txt)"
+
+build-dx-prerelease:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-dx.yml
+    - podman tag localhost/blossomos-dx:latest $CI_REGISTRY_IMAGE:prerelease-dx
+    - podman push $CI_REGISTRY_IMAGE:prerelease-dx --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:prerelease-dx@$(cat /tmp/digest.txt)"
+
+build-nvidia-prerelease:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-nvidia.yml
+    - podman tag localhost/blossomos-nvidia-open:latest $CI_REGISTRY_IMAGE:prerelease-nvidia
+    - podman push $CI_REGISTRY_IMAGE:prerelease-nvidia --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:prerelease-nvidia@$(cat /tmp/digest.txt)"
+
+build-dx-nvidia-prerelease:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-dx-nvidia.yml
+    - podman tag localhost/blossomos-dx-nvidia-open:latest $CI_REGISTRY_IMAGE:prerelease-dx-nvidia
+    - podman push $CI_REGISTRY_IMAGE:prerelease-dx-nvidia --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:prerelease-dx-nvidia@$(cat /tmp/digest.txt)"
+
+# release
+
+build-base-release:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe.yml
+    - podman tag localhost/blossomos:latest $CI_REGISTRY_IMAGE:main
+    - podman push $CI_REGISTRY_IMAGE:main --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:main@$(cat /tmp/digest.txt)"
+
+build-dx-release:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-dx.yml
+    - podman tag localhost/blossomos-dx:latest $CI_REGISTRY_IMAGE:main-dx
+    - podman push $CI_REGISTRY_IMAGE:main-dx --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:main-dx@$(cat /tmp/digest.txt)"
+
+build-nvidia-release:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-nvidia.yml
+    - podman tag localhost/blossomos-nvidia-open:latest $CI_REGISTRY_IMAGE:main-nvidia
+    - podman push $CI_REGISTRY_IMAGE:main-nvidia --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:main-nvidia@$(cat /tmp/digest.txt)"
+
+build-dx-nvidia-release:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - bluebuild build recipes/recipe-dx-nvidia.yml
+    - podman tag localhost/blossomos-dx-nvidia-open:latest $CI_REGISTRY_IMAGE:main-dx-nvidia
+    - podman push $CI_REGISTRY_IMAGE:main-dx-nvidia --digestfile /tmp/digest.txt
+    - cosign sign --yes --key env://COSIGN_PRIVATE_KEY "$CI_REGISTRY_IMAGE:main-dx-nvidia@$(cat /tmp/digest.txt)"
