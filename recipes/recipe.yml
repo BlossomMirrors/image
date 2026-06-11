@@ -6,9 +6,6 @@ image-version: 44
 modules:
   # Install RPM packages, repos, and COPR packages
   - type: script
-    snippets:
-      - "rm -rf /etc/selinux/targeted/active.bak || true"
-      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak"
     scripts:
       - 01-packages.sh
 
