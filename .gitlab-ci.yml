@@ -3,7 +3,7 @@ stages:
 
 variables:
   BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
-  BUILDAH_ISOLATION: chroot
+  BUILDAH_ISOLATION: rootless
   STORAGE_DRIVER: overlay
   STORAGE_OPTS: "overlay.mount_program=/usr/bin/fuse-overlayfs"
   COSIGN_PASSWORD: ""
