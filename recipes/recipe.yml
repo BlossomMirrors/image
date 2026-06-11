@@ -7,7 +7,8 @@ modules:
   # Install RPM packages, repos, and COPR packages
   - type: script
     snippets:
-      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak && mv /etc/selinux/targeted/active.bak /etc/selinux/targeted/active"
+      - "rm -rf /etc/selinux/targeted/active.bak || true"
+      - "mv /etc/selinux/targeted/active /etc/selinux/targeted/active.bak"
     scripts:
       - 01-packages.sh
 
