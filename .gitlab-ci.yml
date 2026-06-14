@@ -23,7 +23,7 @@ build-generic-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - ./build.sh latest generic
+    - sudo ./build.sh latest generic
 
 build-nvidia-latest:
   extends: .build_base
@@ -32,7 +32,7 @@ build-nvidia-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - ./build.sh latest nvidia
+    - sudo ./build.sh latest nvidia
 
 # prerelease
 
@@ -41,14 +41,14 @@ build-generic-prerelease:
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - ./build.sh prerelease generic
+    - sudo ./build.sh prerelease generic
 
 build-nvidia-prerelease:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - ./build.sh prerelease nvidia
+    - sudo ./build.sh prerelease nvidia
 
 # release
 
@@ -57,11 +57,11 @@ build-generic-release:
   rules:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - ./build.sh main generic
+    - sudo ./build.sh main generic
 
 build-nvidia-release:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - ./build.sh main nvidia
+    - sudo ./build.sh main nvidia
