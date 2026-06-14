@@ -32,15 +32,20 @@ dnf5 -y install \
     blossomos-branding \
     blossom-arc \
     blossomui \
+    blossom-sound-theme \
+    atuin \
+    umu-launcher \
     adjust \
     pkglayer \
     blossomos-kinfocenter \
     kwin-pen-cursor \
-    atuin
+    micro \
+    python3-pip
 
-# Install blossomos-shellconfig dependencies from Fedora that aren't pulled
-# in automatically (rpm -i skips dep resolution)
-dnf5 -y install micro python3-pip
+# Install OpenRazer daemon (kmod is installed by the akmods module)
+dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
+dnf -y install openrazer-daemon || true
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
 # blossomos-shellconfig conflicts with bash/zsh over /etc/skel/.bashrc and
 # .zshrc; dnf5 has no --replacefiles flag so install via rpm directly
