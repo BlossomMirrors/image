@@ -207,12 +207,12 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     LABELS+=("--label" "org.opencontainers.image.title=${image_name}")
     LABELS+=("--label" "org.opencontainers.image.version=${ver}")
     LABELS+=("--label" "ostree.linux=${kernel_release}")
-    LABELS+=("--label" "io.artifacthub.package.readme-url=https://git.blossomos.org/Blossom/image/raw/branch/main/README.md")
+    LABELS+=("--label" "io.artifacthub.package.readme-url=https://dev.blossomos.org/Blossom/image/raw/branch/main/README.md")
     LABELS+=("--label" "io.artifacthub.package.logo-url=https://blossomos.org/logo.png")
     LABELS+=("--label" "org.opencontainers.image.description=BlossomOS")
     LABELS+=("--label" "containers.bootc=1")
     LABELS+=("--label" "org.opencontainers.image.created=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)")
-    LABELS+=("--label" "org.opencontainers.image.source=https://git.blossomos.org/Blossom/image/raw/branch/main/Containerfile.in")
+    LABELS+=("--label" "org.opencontainers.image.source=https://dev.blossomos.org/Blossom/image/raw/branch/main/Containerfile.in")
     LABELS+=("--label" "org.opencontainers.image.url=https://blossomos.org")
     LABELS+=("--label" "org.opencontainers.image.vendor={{ repo_organization }}")
     LABELS+=("--label" "io.artifacthub.package.deprecated=false")
@@ -325,10 +325,10 @@ rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0":
         io.artifacthub.package.keywords=bootc,fedora,blossomos,ublue,universal-blue,kde
         io.artifacthub.package.logo-url=https://blossomos.org/logo.png
         io.artifacthub.package.maintainers=[{\"name\": \"koyu\", \"email\": \"me@koyu.space\"}]
-        io.artifacthub.package.readme-url=https://git.blossomos.org/Blossom/image/raw/branch/main/README.md
+        io.artifacthub.package.readme-url=https://dev.blossomos.org/Blossom/image/raw/branch/main/README.md
         org.opencontainers.image.created=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)
         org.opencontainers.image.license=Apache-2.0
-        org.opencontainers.image.source=https://git.blossomos.org/Blossom/image/raw/branch/main/Containerfile.in
+        org.opencontainers.image.source=https://dev.blossomos.org/Blossom/image/raw/branch/main/Containerfile.in
         org.opencontainers.image.title=${image_name}
         org.opencontainers.image.url=https://blossomos.org
         org.opencontainers.image.vendor={{ repo_organization }}

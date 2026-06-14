@@ -6,7 +6,7 @@ BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kin
 
 ## Images
 
-Published to `git.blossomos.org/blossom/image`.
+Published to `dev.blossomos.org/blossom/image`.
 
 | Tag | Description |
 |-----|-------------|
@@ -58,7 +58,7 @@ bluebuild build recipes/recipe-dx-nvidia.yml
 Images are signed with cosign. Verify with the included public key:
 
 ```sh
-cosign verify --key cosign.pub git.blossomos.org/blossom/image:latest
+cosign verify --key cosign.pub dev.blossomos.org/blossom/image:latest
 ```
 
 ## License
