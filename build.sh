@@ -12,14 +12,14 @@ if [[ "${TAG}" == "--help" || "${TAG}" == "-h" ]]; then
     echo "  generic|nvidia  Hardware variant (default: generic)"
     echo ""
     echo "Always builds both base and dx images. Resulting tags:"
-    echo "  latest          dev.blossomos.org/blossom/image:latest"
-    echo "  latest          dev.blossomos.org/blossom/image:latest-dx"
-    echo "  latest nvidia   dev.blossomos.org/blossom/image:latest-nvidia"
-    echo "  latest nvidia   dev.blossomos.org/blossom/image:latest-nvidia-dx"
-    echo "  main            dev.blossomos.org/blossom/image:main"
-    echo "  main            dev.blossomos.org/blossom/image:main-dx"
-    echo "  main nvidia     dev.blossomos.org/blossom/image:main-nvidia"
-    echo "  main nvidia     dev.blossomos.org/blossom/image:main-nvidia-dx"
+    echo "  latest          registry.blossomos.org/blossom/image:latest"
+    echo "  latest          registry.blossomos.org/blossom/image:latest-dx"
+    echo "  latest nvidia   registry.blossomos.org/blossom/image:latest-nvidia"
+    echo "  latest nvidia   registry.blossomos.org/blossom/image:latest-nvidia-dx"
+    echo "  main            registry.blossomos.org/blossom/image:main"
+    echo "  main            registry.blossomos.org/blossom/image:main-dx"
+    echo "  main nvidia     registry.blossomos.org/blossom/image:main-nvidia"
+    echo "  main nvidia     registry.blossomos.org/blossom/image:main-nvidia-dx"
     exit 0
 fi
 
@@ -34,7 +34,7 @@ if [[ "${VARIANT}" != "generic" && "${VARIANT}" != "nvidia" ]]; then
     exit 1
 fi
 
-REGISTRY="${REGISTRY:-dev.blossomos.org}"
+REGISTRY="${REGISTRY:-registry.blossomos.org}"
 REGISTRY_ORG="${REGISTRY_ORG:-blossom}"
 REGISTRY_IMAGE="${REGISTRY_IMAGE:-image}"
 
