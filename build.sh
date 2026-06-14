@@ -5,11 +5,11 @@ TAG="${1:-latest}"
 VARIANT="${2:-generic}"
 
 if [[ "${TAG}" == "--help" || "${TAG}" == "-h" ]]; then
-    echo "Usage: $0 [main|latest] [generic|nvidia]"
+    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia]"
     echo ""
     echo "Arguments:"
-    echo "  main|latest   Registry tag prefix (default: latest)"
-    echo "  generic|nvidia  Hardware variant (default: generic)"
+    echo "  main|latest|prerelease   Registry tag prefix (default: latest)"
+    echo "  generic|nvidia           Hardware variant (default: generic)"
     echo ""
     echo "Always builds both base and dx images. Resulting tags:"
     echo "  latest          registry.blossomos.org/blossom/image:latest"
@@ -20,12 +20,16 @@ if [[ "${TAG}" == "--help" || "${TAG}" == "-h" ]]; then
     echo "  main            registry.blossomos.org/blossom/image:main-dx"
     echo "  main nvidia     registry.blossomos.org/blossom/image:main-nvidia"
     echo "  main nvidia     registry.blossomos.org/blossom/image:main-nvidia-dx"
+    echo "  prerelease      registry.blossomos.org/blossom/image:prerelease"
+    echo "  prerelease      registry.blossomos.org/blossom/image:prerelease-dx"
+    echo "  prerelease nvidia registry.blossomos.org/blossom/image:prerelease-nvidia"
+    echo "  prerelease nvidia registry.blossomos.org/blossom/image:prerelease-nvidia-dx"
     exit 0
 fi
 
-if [[ "${TAG}" != "main" && "${TAG}" != "latest" ]]; then
-    echo "Usage: $0 [main|latest] [generic|nvidia]"
-    echo "Error: first argument must be 'main' or 'latest' (got '${TAG}')"
+if [[ "${TAG}" != "main" && "${TAG}" != "latest" && "${TAG}" != "prerelease" ]]; then
+    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia]"
+    echo "Error: first argument must be 'main', 'latest', or 'prerelease' (got '${TAG}')"
     exit 1
 fi
 if [[ "${VARIANT}" != "generic" && "${VARIANT}" != "nvidia" ]]; then
