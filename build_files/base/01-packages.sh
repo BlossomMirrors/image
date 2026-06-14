@@ -98,7 +98,7 @@ baseurl=https://pkgs.netbird.io/yum/
 enabled=0
 gpgcheck=1
 gpgkey=https://pkgs.netbird.io/yum/repodata/repomd.xml.key
-repo_gpgcheck=1
+repo_gpgcheck=0
 EOF
 rpm --import https://pkgs.netbird.io/yum/repodata/repomd.xml.key
 dnf5 download --destdir=/tmp/netbird --arch="$(rpm -E '%_arch')" --enablerepo='netbird' netbird
