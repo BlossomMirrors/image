@@ -1,6 +1,6 @@
 # BlossomOS Image
 
-[![Build Status](https://ci.blossomos.org/api/badges/1/status.svg)](https://ci.blossomos.org)
+[![pipeline status](https://dev.blossomos.org/blossom/os/core/image/badges/main/pipeline.svg)](https://dev.blossomos.org/blossom/os/core/image/-/commits/main)
 
 BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kinoite](https://fedoraproject.org/kinoite/) (KDE Plasma), using [BlueBuild](https://blue-build.org/) for declarative image configuration.
 
