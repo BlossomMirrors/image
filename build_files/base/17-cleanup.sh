@@ -15,6 +15,7 @@ systemctl disable tailscaled.service
 systemctl disable netbird.service
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
+systemctl enable blossomos-dualboot-detect.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
 

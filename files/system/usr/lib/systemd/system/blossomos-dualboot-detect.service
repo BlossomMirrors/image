@@ -1,0 +1,12 @@
+[Unit]
+Description=BlossomOS Windows Dual Boot Detection
+After=local-fs.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-dualboot-detect
+
+[Install]
+WantedBy=multi-user.target
