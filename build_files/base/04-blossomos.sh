@@ -31,6 +31,7 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    blossomos-webapps \
     blossomos-skel \
     blossomui \
     blossom-sound-theme \
@@ -48,17 +49,10 @@ dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.gith
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
-# blossomos-shellconfig and blossomos-webapps conflict with existing files;
+# blossomos-shellconfig conflicts with existing files;
 # dnf5 has no --replacefiles flag so install via rpm directly
-dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig blossomos-webapps
+dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig
 rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm
-# blossomos-webapps owns /opt/blossomos-webapps/ which already exists in the layer;
-# extract to a clean temp dir first so cpio can mkdir ./opt without conflict, then copy to /
-tmpdir=$(mktemp -d)
-rpm2cpio /tmp/blossom/blossomos-webapps*.rpm | cpio -idumv -D "$tmpdir"
-cp -a "$tmpdir/." /
-rm -rf "$tmpdir"
-rpm -i --justdb /tmp/blossom/blossomos-webapps*.rpm
 rm -rf /tmp/blossom
 
 # Add BlossomOS Flatpak remote
