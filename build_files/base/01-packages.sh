@@ -236,9 +236,7 @@ rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/
 #    dnf5 upgrade --refresh --advisory=FEDORA-2024-dd2e9fb225
 #fi
 
-# Explicitly install KDE Plasma related packages with the same version as in base image
-dnf -y install \
-    plasma-firewall-$(rpm -q --qf "%{VERSION}" plasma-desktop)
+dnf -y install plasma-firewall
 
 # Install DX specific packages
 if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then

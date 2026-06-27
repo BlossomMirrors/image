@@ -31,6 +31,9 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    blossomos-shellconfig \
+    blossomos-webapps \
+    blossomos-skel \
     blossomui \
     blossom-sound-theme \
     atuin \
