@@ -53,8 +53,11 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig blossomos-webapps
 rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm
 # blossomos-webapps owns /opt/blossomos-webapps/ which already exists in the layer;
-# extract via cpio to bypass RPM transaction and register in the RPM DB separately
-rpm2cpio /tmp/blossom/blossomos-webapps*.rpm | cpio -fuidmv -D /
+# extract to a clean temp dir first so cpio can mkdir ./opt without conflict, then copy to /
+tmpdir=$(mktemp -d)
+rpm2cpio /tmp/blossom/blossomos-webapps*.rpm | cpio -idumv -D "$tmpdir"
+cp -a "$tmpdir/." /
+rm -rf "$tmpdir"
 rpm -i --justdb /tmp/blossom/blossomos-webapps*.rpm
 rm -rf /tmp/blossom
 
