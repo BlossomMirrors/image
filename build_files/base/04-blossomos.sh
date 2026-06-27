@@ -48,10 +48,13 @@ dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.gith
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
-# blossomos-shellconfig and blossomos-webapps conflict with existing files;
+# blossomos-shellconfig conflicts with existing files;
 # dnf5 has no --replacefiles flag so install via rpm directly
 dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig blossomos-webapps
-rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm /tmp/blossom/blossomos-webapps*.rpm
+rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm
+# /opt/blossomos-webapps/ pre-exists in the layer; remove it so cpio can unpack cleanly
+rm -rf /opt/blossomos-webapps
+rpm -i /tmp/blossom/blossomos-webapps*.rpm
 rm -rf /tmp/blossom
 
 # Add BlossomOS Flatpak remote
