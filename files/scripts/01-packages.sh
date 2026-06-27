@@ -164,6 +164,15 @@ copr_install_isolated "lizardbyte/beta" \
 copr_install_isolated "peterwu/rendezvous" \
     "bibata-cursor-themes"
 
+# KDE Beta COPR
+KDE_BETA_COPR="@kdesig/kde-beta"
+KDE_BETA_REPO="copr:copr.fedorainfracloud.org:group_kdesig:kde-beta"
+dnf5 -y copr enable "$KDE_BETA_COPR"
+dnf5 -y copr disable "$KDE_BETA_COPR"
+dnf5 versionlock delete "qt6-*" 2>/dev/null || true
+dnf5 versionlock delete "plasma-desktop" 2>/dev/null || true
+dnf5 upgrade --skip-unavailable -y --enablerepo="$KDE_BETA_REPO"
+
 # Packages to exclude - common to all versions
 EXCLUDED_PACKAGES=(
     sddm
