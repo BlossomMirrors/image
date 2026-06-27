@@ -87,10 +87,21 @@ kcm-fcitx5
 # KDE / Desktop
 kcm-plasmalogin
 kate
+kpipewire
+krdp
 ksshaskpass
 ksystemlog
+plasma-firewall-ufw
 plasma-login-manager
+plasma-oxygen
+plasma-oxygen-qt5
+plasma-oxygen-qt6
+plasma-union
 plasma-wallpapers-dynamic
+plasma-welcome
+polkit-kde
+qqc2-breeze-style
+xdg-desktop-portal-kde
 
 # Media Codecs / Thumbnails
 ffmpegthumbs

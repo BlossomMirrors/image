@@ -170,7 +170,7 @@ dnf5 -y copr disable "$KDE_BETA_COPR"
 dnf5 versionlock delete "qt6-*" 2>/dev/null || true
 dnf5 versionlock delete "plasma-desktop" 2>/dev/null || true
 dnf5 upgrade --skip-unavailable -y --enablerepo="$KDE_BETA_REPO"
-dnf5 group upgrade --skip-unavailable -y --enablerepo="$KDE_BETA_REPO" "KDE Plasma Workspaces"
+dnf5 group install --skip-unavailable -y --enablerepo="$KDE_BETA_REPO" "KDE Plasma Workspaces"
 
 # Packages to exclude - common to all versions
 EXCLUDED_PACKAGES=(
@@ -192,7 +192,6 @@ EXCLUDED_PACKAGES=(
     plasma-discover-kns
     plasma-discover-rpm-ostree
     plasma-welcome-fedora
-    plasma-welcome
     podman-docker
     kaddressbook
 )
