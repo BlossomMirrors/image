@@ -13,6 +13,8 @@ variables:
   before_script:
     - cp "$COSIGN_PRIVATE_KEY" cosign.key
     - echo "$CI_REGISTRY_PASSWORD" | podman login registry.blossomos.org -u "$CI_REGISTRY_USER" --password-stdin
+  after_script:
+    - sudo podman system prune -af
 
 # latest (main branch + schedule + manual)
 
