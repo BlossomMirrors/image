@@ -8,10 +8,11 @@ set -eoux pipefail
 source /ctx/build_files/shared/blossom-repo.sh
 
 # BlossomOS kernel build
-# Derived from the KERNEL build-arg (akmods flavor's ostree.linux label) so
-# akmods (v4l2loopback, xone, openrazer, nvidia-open, zfs) below stay
-# ABI-compatible. repo.blossomos.org must publish a matching kernel build.
-KERNEL_VERSION="${KERNEL%.*}"
+# Not derived from the KERNEL build-arg. KERNEL picks the closest matching
+# ublue-os akmods image, whose ostree.linux label carries a fc44 dist tag,
+# but repo.blossomos.org's kernel package NVR does not carry one. Bump this
+# by hand whenever a new kernel build is published to repo.blossomos.org.
+BLOSSOM_KERNEL_VERSION="7.0.13-200"
 
 blossom_repo_setup
 
@@ -25,22 +26,21 @@ rm -rf /usr/lib/modules
 
 # Install Kernel (pinned build from repo.blossomos.org, not Fedora's stock build)
 #
-# The patched kernel keeps Fedora's exact NVR, so an ordinary
-# `dnf5 install --enablerepo=...` can't be trusted to pick the blossomos
-# copy over an identically-versioned one in the base Fedora repos. Download
-# the RPMs from the blossom repo explicitly and install the local files, so
-# there is no repo resolution to get wrong.
+# An ordinary `dnf5 install --enablerepo=...` can't be trusted to pick the
+# blossomos copy over a same or higher versioned one in the base Fedora
+# repos. Download the RPMs from the blossom repo explicitly and install the
+# local files, so there is no repo resolution to get wrong.
 KERNEL_PKGS=(
-    "kernel-${KERNEL_VERSION}"
-    "kernel-core-${KERNEL_VERSION}"
-    "kernel-modules-${KERNEL_VERSION}"
-    "kernel-modules-core-${KERNEL_VERSION}"
-    "kernel-modules-extra-${KERNEL_VERSION}"
+    "kernel-${BLOSSOM_KERNEL_VERSION}"
+    "kernel-core-${BLOSSOM_KERNEL_VERSION}"
+    "kernel-modules-${BLOSSOM_KERNEL_VERSION}"
+    "kernel-modules-core-${BLOSSOM_KERNEL_VERSION}"
+    "kernel-modules-extra-${BLOSSOM_KERNEL_VERSION}"
 )
 if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then
     KERNEL_PKGS+=(
-        "kernel-devel-${KERNEL_VERSION}"
-        "kernel-devel-matched-${KERNEL_VERSION}"
+        "kernel-devel-${BLOSSOM_KERNEL_VERSION}"
+        "kernel-devel-matched-${BLOSSOM_KERNEL_VERSION}"
     )
 fi
 
