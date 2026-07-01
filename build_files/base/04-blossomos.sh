@@ -25,7 +25,6 @@ dnf5 -y install \
     blossomos-skel \
     blossomui \
     blossom-sound-theme \
-    plasma-patches-blossom \
     atuin \
     umu-launcher \
     adjust \
@@ -39,10 +38,10 @@ dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.gith
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
-# blossomos-shellconfig conflicts with existing files;
+# blossomos-shellconfig and plasma-patches-blossom conflict with existing files;
 # dnf5 has no --replacefiles flag so install via rpm directly
-dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig
-rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm
+dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig plasma-patches-blossom
+rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm /tmp/blossom/plasma-patches-blossom*.rpm
 rm -rf /tmp/blossom
 
 # Add BlossomOS Flatpak remote
