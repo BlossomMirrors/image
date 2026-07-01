@@ -36,13 +36,9 @@ KERNEL_PKGS=(
     "kernel-modules-${BLOSSOM_KERNEL_VERSION}"
     "kernel-modules-core-${BLOSSOM_KERNEL_VERSION}"
     "kernel-modules-extra-${BLOSSOM_KERNEL_VERSION}"
+    "kernel-devel-${BLOSSOM_KERNEL_VERSION}"
+    "kernel-devel-matched-${BLOSSOM_KERNEL_VERSION}"
 )
-if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then
-    KERNEL_PKGS+=(
-        "kernel-devel-${BLOSSOM_KERNEL_VERSION}"
-        "kernel-devel-matched-${BLOSSOM_KERNEL_VERSION}"
-    )
-fi
 
 mkdir -p /tmp/blossom-kernel
 dnf5 download --destdir=/tmp/blossom-kernel --disablerepo='*' --enablerepo="${BLOSSOM_REPO_ID}" "${KERNEL_PKGS[@]}"
