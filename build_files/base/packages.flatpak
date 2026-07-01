@@ -18,6 +18,7 @@ net.imput.helium blossomos
 org.kde.kalk
 org.kde.kclock
 org.kde.kweather
+org.kde.qrca
 org.qbittorrent.qBittorrent
 
 # Remote Desktop
