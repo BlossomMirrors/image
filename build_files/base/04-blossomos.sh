@@ -4,23 +4,13 @@ echo "::group:: ===$(basename "$0")==="
 
 set -ouex pipefail
 
-BLOSSOM_REPO_URL="${BLOSSOM_REPO_URL:-https://repo.blossomos.org/rpm/}"
+#shellcheck source=build_files/shared/blossom-repo.sh
+source /ctx/build_files/shared/blossom-repo.sh
 
-REPO_ID="blossomos-main"
-REPO_NAME="BlossomOS Main"
-
-# Import GPG key
-rpm --import https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub
+REPO_ID="${BLOSSOM_REPO_ID}"
 
 # Add repo (disabled — installed packages use --enablerepo)
-cat > /etc/yum.repos.d/blossom.repo << EOF
-[${REPO_ID}]
-name=${REPO_NAME}
-baseurl=${BLOSSOM_REPO_URL}
-enabled=0
-gpgcheck=1
-gpgkey=https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub
-EOF
+blossom_repo_setup
 
 # Remove conflicting packages from RPM DB only — files live in ostree layer and
 # cannot be deleted by a normal transaction
