@@ -52,6 +52,14 @@ dnf5 versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel
 mkdir -p /etc/pki/akmods/certs
 curl "https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.der" --retry 3 -Lo /etc/pki/akmods/certs/akmods-ublue.der
 
+# /var is a fresh, empty tmpfs for this RUN step (Containerfile.in mounts
+# it that way), so /var/tmp doesn't have the usual world-writable sticky
+# bit yet. akmods drops privileges to the akmods user via runuser to run
+# rpmbuild, which needs to write there; without this every akmods build
+# below fails with "Permission denied" writing to /var/tmp.
+mkdir -p /var/tmp
+chmod 1777 /var/tmp
+
 # xone (Xbox controller/wireless adapter) from ublue-os' own akmods COPR,
 # as an akmod (dkms-buildable source) instead of the precompiled kmod-xone
 # mounted from the akmods image, which is built against Fedora's stock
