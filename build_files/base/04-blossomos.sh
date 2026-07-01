@@ -33,6 +33,12 @@ dnf5 -y install \
     micro \
     python3-pip
 
+# Replace stock kinfocenter with our BlossomOS-patched build
+mkdir -p /tmp/blossom-kinfocenter
+dnf5 download --destdir=/tmp/blossom-kinfocenter --disablerepo='*' --enablerepo="${REPO_ID}" kinfocenter
+dnf5 install -y /tmp/blossom-kinfocenter/*.rpm
+rm -rf /tmp/blossom-kinfocenter
+
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
