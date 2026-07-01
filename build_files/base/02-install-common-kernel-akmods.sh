@@ -59,4 +59,9 @@ dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardwa
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
+# openrazer-kernel-modules-dkms' %posttrans hook builds against the running
+# container's kernel (the build host's, not ours) and fails. Files are
+# already on disk by then, so retarget the dkms build at our actual kernel.
+dkms autoinstall -k "${BLOSSOM_KERNEL_VERSION}.x86_64" || true
+
 echo "::endgroup::"
