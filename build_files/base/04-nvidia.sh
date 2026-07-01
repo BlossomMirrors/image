@@ -24,7 +24,12 @@ dnf5 config-manager setopt fedora-nvidia*.enabled=1 nvidia-container-toolkit.ena
 # Pin an exact NVR so the akmod and the userspace driver below resolve to
 # the same release even if negativo17 publishes a new build mid-transaction.
 DRIVER_VERSION="$(dnf5 info akmod-nvidia | grep -E '^Version|^Release' | awk '{print $3}' | xargs | sed 's/ /-/')"
-dnf5 -y install "akmod-nvidia-${DRIVER_VERSION}"
+# akmod-nvidia's own %post always tries (and, as root inside a container
+# build, always fails non-critically) to auto-build immediately on
+# install; dnf5 reports that as a failed transaction even though the
+# package's files land fine, so this is wrapped and followed by an
+# explicit akmods build below.
+dnf5 -y install "akmod-nvidia-${DRIVER_VERSION}" || true
 
 # Our own kernel, not the running container host's. akmod-nvidia builds the
 # open kernel modules (vs. proprietary) when KERNEL_MODULE_TYPE=open, same

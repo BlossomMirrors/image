@@ -56,12 +56,18 @@ curl "https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.de
 # as an akmod (dkms-buildable source) instead of the precompiled kmod-xone
 # mounted from the akmods image, which is built against Fedora's stock
 # fc44-tagged kernel and can never match our kernel-uname-r.
-copr_install_isolated "ublue-os/akmods" akmod-xone xone-kmod-common
+#
+# akmod-* packages' own %post/%posttrans hooks always try (and, as root
+# inside a container build, always fail non-critically) to auto-build
+# immediately on install; dnf5 reports that as a failed transaction even
+# though the package's files land fine, so this is always wrapped in
+# `|| true` and followed by an explicit akmods build below.
+copr_install_isolated "ublue-os/akmods" akmod-xone xone-kmod-common || true
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod xone || true
 
 # v4l2loopback from RPM Fusion, same reasoning as xone above
 dnf -y install "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
-dnf -y install akmod-v4l2loopback
+dnf -y install akmod-v4l2loopback || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/rpmfusion-free*.repo
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod v4l2loopback || true
 
