@@ -42,7 +42,7 @@ KERNEL_PKGS=(
 
 mkdir -p /tmp/blossom-kernel
 dnf5 download --destdir=/tmp/blossom-kernel --disablerepo='*' --enablerepo="${BLOSSOM_REPO_ID}" "${KERNEL_PKGS[@]}"
-rpm -ivh /tmp/blossom-kernel/*.rpm
+dnf5 install -y /tmp/blossom-kernel/*.rpm
 rm -rf /tmp/blossom-kernel
 
 dnf5 versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra
