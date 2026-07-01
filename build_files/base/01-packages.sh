@@ -133,6 +133,17 @@ copr_install_isolated "ublue-os/staging" \
     "fw-fanctrl" \
     "plasma-setup"
 
+# fw-fanctrl's periodic EC fan-duty writes (enabled by the cros_ec_hwmon PWM
+# patches in fw16 patches/) can contend with USB-PD/typec renegotiation on
+# the same EC command bus and has been observed to keep eGPU enclosures from
+# powering on when hotplugged. Lower the write frequency as a general
+# mitigation; blossomos-fanctrl-pause.service covers the hotplug window itself.
+if [[ -f /etc/fw-fanctrl/config.json ]]; then
+    jq '.strategies |= map_values(.fanSpeedUpdateFrequency = 10)' \
+        /etc/fw-fanctrl/config.json > /tmp/fw-fanctrl-config.json
+    mv /tmp/fw-fanctrl-config.json /etc/fw-fanctrl/config.json
+fi
+
 # From ublue-os/packages
 copr_install_isolated "ublue-os/packages" \
     "oversteer-udev" \

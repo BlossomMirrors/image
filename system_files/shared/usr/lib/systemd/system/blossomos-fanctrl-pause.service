@@ -1,0 +1,7 @@
+[Unit]
+Description=BlossomOS Pause fw-fanctrl during USB-C/USB4 partner negotiation
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/blossomos-fanctrl-pause

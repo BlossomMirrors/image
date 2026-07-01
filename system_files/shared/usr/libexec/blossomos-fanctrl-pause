@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+# Give fw-fanctrl's periodic EC fan-duty writes a moment to get out of the
+# way of USB-PD/typec renegotiation with a newly connected port partner
+# (e.g. an eGPU enclosure trying to power on its PSU).
+set -euo pipefail
+
+systemctl stop fw-fanctrl.service 2>/dev/null || true
+sleep 10
+systemctl start fw-fanctrl.service 2>/dev/null || true

@@ -1,0 +1,5 @@
+# Pause fw-fanctrl briefly when a new USB-C/USB4 partner connects, so its
+# periodic EC fan-control writes don't contend with USB-PD/typec
+# renegotiation (this has been observed to keep eGPU enclosures from
+# powering on when hotplugged). See blossomos-fanctrl-pause.service.
+ACTION=="add", SUBSYSTEM=="typec", DEVTYPE=="typec_partner", TAG+="systemd", ENV{SYSTEMD_WANTS}+="blossomos-fanctrl-pause.service"
