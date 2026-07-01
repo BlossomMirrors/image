@@ -29,3 +29,6 @@ org.kde.knights
 org.kde.kpat
 org.kde.kmahjongg
 org.kde.kmines
+
+# BlossomUI
+org.kde.KStyle.BlossomUI blossomos
