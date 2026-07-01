@@ -25,6 +25,7 @@ dnf5 -y install \
     blossomos-skel \
     blossomui \
     blossom-sound-theme \
+    plasma-patches-blossom \
     atuin \
     umu-launcher \
     adjust \
