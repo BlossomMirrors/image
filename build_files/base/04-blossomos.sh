@@ -29,7 +29,6 @@ dnf5 -y install \
     umu-launcher \
     adjust \
     pkglayer \
-    blossomos-kinfocenter \
     kwin-pen-cursor \
     micro \
     python3-pip
