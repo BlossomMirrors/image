@@ -8,10 +8,10 @@ set -eoux pipefail
 source /ctx/build_files/shared/blossom-repo.sh
 
 # BlossomOS kernel build
-# Version must match the akmods flavor's ostree.linux
-# label so akmods (v4l2loopback, xone, openrazer, nvidia-open, zfs) below
-# stay ABI-compatible.
-KERNEL_VERSION="7.0.13-200.fc44"
+# Derived from the KERNEL build-arg (akmods flavor's ostree.linux label) so
+# akmods (v4l2loopback, xone, openrazer, nvidia-open, zfs) below stay
+# ABI-compatible. repo.blossomos.org must publish a matching kernel build.
+KERNEL_VERSION="${KERNEL%.*}"
 
 blossom_repo_setup
 
@@ -24,18 +24,30 @@ done
 rm -rf /usr/lib/modules
 
 # Install Kernel (pinned build from repo.blossomos.org, not Fedora's stock build)
-dnf5 -y install --enablerepo="${BLOSSOM_REPO_ID}" \
-    "kernel-${KERNEL_VERSION}" \
-    "kernel-core-${KERNEL_VERSION}" \
-    "kernel-modules-${KERNEL_VERSION}" \
-    "kernel-modules-core-${KERNEL_VERSION}" \
+#
+# The patched kernel keeps Fedora's exact NVR, so an ordinary
+# `dnf5 install --enablerepo=...` can't be trusted to pick the blossomos
+# copy over an identically-versioned one in the base Fedora repos. Download
+# the RPMs from the blossom repo explicitly and install the local files, so
+# there is no repo resolution to get wrong.
+KERNEL_PKGS=(
+    "kernel-${KERNEL_VERSION}"
+    "kernel-core-${KERNEL_VERSION}"
+    "kernel-modules-${KERNEL_VERSION}"
+    "kernel-modules-core-${KERNEL_VERSION}"
     "kernel-modules-extra-${KERNEL_VERSION}"
-
+)
 if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then
-  dnf5 -y install --enablerepo="${BLOSSOM_REPO_ID}" \
-      "kernel-devel-${KERNEL_VERSION}" \
-      "kernel-devel-matched-${KERNEL_VERSION}"
+    KERNEL_PKGS+=(
+        "kernel-devel-${KERNEL_VERSION}"
+        "kernel-devel-matched-${KERNEL_VERSION}"
+    )
 fi
+
+mkdir -p /tmp/blossom-kernel
+dnf5 download --destdir=/tmp/blossom-kernel --disablerepo='*' --enablerepo="${BLOSSOM_REPO_ID}" "${KERNEL_PKGS[@]}"
+rpm -ivh /tmp/blossom-kernel/*.rpm
+rm -rf /tmp/blossom-kernel
 
 dnf5 versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
