@@ -55,7 +55,10 @@ dnf5 -y install \
 # hybrid GPU switching daemon for kinoite/silverblue.
 copr_install_isolated "ublue-os/staging" supergfxctl
 
-KMOD_VERSION="$(rpm -q --queryformat '%{VERSION}' kmod-nvidia)"
+# Read straight from the built module rather than `rpm -q kmod-nvidia`:
+# akmods registers it under a kernel-embedded name like
+# kmod-nvidia-${KERNEL_UNAME_R}, not the bare name.
+KMOD_VERSION="$(modinfo -F version /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
 NVIDIA_DRIVER_VERSION="$(rpm -q --queryformat '%{VERSION}' nvidia-driver)"
 if [[ "${KMOD_VERSION}" != "${NVIDIA_DRIVER_VERSION}" ]]; then
     echo "Error: kmod-nvidia version (${KMOD_VERSION}) does not match nvidia-driver version (${NVIDIA_DRIVER_VERSION})"
