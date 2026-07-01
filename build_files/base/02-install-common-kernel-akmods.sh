@@ -6,6 +6,8 @@ set -eoux pipefail
 
 #shellcheck source=build_files/shared/blossom-repo.sh
 source /ctx/build_files/shared/blossom-repo.sh
+#shellcheck source=build_files/shared/copr-helpers.sh
+source /ctx/build_files/shared/copr-helpers.sh
 
 # BlossomOS kernel build
 # Not derived from the KERNEL build-arg. KERNEL picks the closest matching
@@ -47,12 +49,21 @@ rm -rf /tmp/blossom-kernel
 
 dnf5 versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
-dnf -y install /tmp/rpms/{common,kmods}/*xone*.rpm /tmp/rpms/{common,kmods}/*openrazer*.rpm || true
-
-dnf -y install /tmp/rpms/{kmods,common}/*v4l2loopback*.rpm || true
-
 mkdir -p /etc/pki/akmods/certs
 curl "https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.der" --retry 3 -Lo /etc/pki/akmods/certs/akmods-ublue.der
+
+# xone (Xbox controller/wireless adapter) from ublue-os' own akmods COPR,
+# as an akmod (dkms-buildable source) instead of the precompiled kmod-xone
+# mounted from the akmods image, which is built against Fedora's stock
+# fc44-tagged kernel and can never match our kernel-uname-r.
+copr_install_isolated "ublue-os/akmods" akmod-xone xone-kmod-common
+akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod xone || true
+
+# v4l2loopback from RPM Fusion, same reasoning as xone above
+dnf -y install "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
+dnf -y install akmod-v4l2loopback
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/rpmfusion-free*.repo
+akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod v4l2loopback || true
 
 # OpenRazer from hardware:razer repo (not a COPR)
 dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
