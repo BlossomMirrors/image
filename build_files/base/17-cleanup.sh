@@ -19,6 +19,9 @@ systemctl enable blossomos-dualboot-detect.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
 
+# Enable kAirPods user service for all users
+systemctl --global enable kairpodsd.service
+
 # Nuke possible Fedora flatpak repos
 systemctl enable flatpak-nuke-fedora.service
 
