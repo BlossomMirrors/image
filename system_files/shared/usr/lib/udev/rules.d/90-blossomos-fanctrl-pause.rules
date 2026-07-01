@@ -1,5 +1,9 @@
-# Pause fw-fanctrl briefly when a new USB-C/USB4 partner connects, so its
+# Pause fw-fanctrl briefly when a Thunderbolt/USB4 device connects, so its
 # periodic EC fan-control writes don't contend with USB-PD/typec
 # renegotiation (this has been observed to keep eGPU enclosures from
-# powering on when hotplugged). See blossomos-fanctrl-pause.service.
-ACTION=="add", SUBSYSTEM=="typec", DEVTYPE=="typec_partner", TAG+="systemd", ENV{SYSTEMD_WANTS}+="blossomos-fanctrl-pause.service"
+# powering on when hotplugged). Scoped to the thunderbolt subsystem, not
+# plain typec partners, so ordinary USB-C charging is left alone — matching
+# on typec partners fired on every AC plug event too and delayed the EC's
+# charging-status report, leaving power_supply stuck on stale values.
+# See blossomos-fanctrl-pause.service.
+ACTION=="add", SUBSYSTEM=="thunderbolt", TAG+="systemd", ENV{SYSTEMD_WANTS}+="blossomos-fanctrl-pause.service"
