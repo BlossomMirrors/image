@@ -69,6 +69,7 @@ openrgb-udev-rules
 powerstat
 powertop
 solaar-udev
+steam-devices
 
 # Input Methods
 fcitx5-chewing
