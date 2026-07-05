@@ -25,6 +25,7 @@ dnf5 -y install \
     blossomos-skel \
     blossomui \
     blossom-sound-theme \
+    blossom-kcm-software-update \
     atuin \
     umu-launcher \
     adjust \
