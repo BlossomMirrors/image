@@ -236,6 +236,7 @@ EXCLUDED_PACKAGES=(
     plasma-welcome-fedora
     podman-docker
     kaddressbook
+    fcitx
 )
 
 # Version-specific package exclusions
