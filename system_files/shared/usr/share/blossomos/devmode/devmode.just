@@ -1,5 +1,5 @@
 # switch to or back from the developer experience image
-enable:
+toggle:
     #!/usr/bin/env bash
     set -e
 
