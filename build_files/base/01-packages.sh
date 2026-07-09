@@ -129,7 +129,31 @@ EOF
 echo "Installing mullvad-vpn from official repo..."
 dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
 dnf config-manager setopt mullvad-stable.enabled=0
-dnf -y install --enablerepo='mullvad-stable' mullvad-vpn
+dnf5 download --destdir=/tmp/mullvad --enablerepo='mullvad-stable' mullvad-vpn
+# rpm -i below does not resolve dependencies like dnf install would
+dnf5 -y install dbus-libs libXScrnSaver libnotify
+# /opt is a symlink to /var/opt in this base image, and /var/opt does not exist yet
+# at this point in the build, so the rpm cannot unpack its /opt/Mullvad VPN payload
+mkdir -p /var/opt
+rpm -i --noscripts /tmp/mullvad/MullvadVPN*.rpm
+rm -rf /tmp/mullvad
+
+# clean-stage.sh wipes /opt at the end of the build for downstream image compatibility,
+# so anything left there would be silently dropped. Move the app into /usr/lib/opt instead
+# and repoint the desktop entry and service unit that reference its old location.
+mkdir -p /usr/lib/opt
+mv "/var/opt/Mullvad VPN" "/usr/lib/opt/Mullvad VPN"
+rmdir /var/opt
+
+sed -i 's#/opt/Mullvad VPN#/usr/lib/opt/Mullvad VPN#' /usr/share/applications/mullvad-vpn.desktop
+sed -i \
+    -e 's#/opt/Mullvad\x20VPN#/usr/lib/opt/Mullvad\x20VPN#' \
+    -e 's#/opt/Mullvad VPN#/usr/lib/opt/Mullvad VPN#' \
+    /usr/lib/systemd/system/mullvad-daemon.service
+
+# rpm's postinstall scriptlet normally sets this, but --noscripts skips it.
+# The setuid bit lets split tunneling work for unprivileged users.
+chmod u+s /usr/bin/mullvad-exclude
 
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
