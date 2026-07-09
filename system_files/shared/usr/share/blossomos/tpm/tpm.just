@@ -1,3 +1,21 @@
+# show which unlock methods are enrolled for the encrypted disk
+status:
+    #!/usr/bin/env bash
+    set -e
+
+    mapfile -t UUIDS < <(awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
+    if [[ ${#UUIDS[@]} -eq 0 ]]; then
+        gum style --foreground 1 "No encrypted device found in /etc/crypttab"
+        exit 1
+    fi
+
+    for CRYPT_UUID in "${UUIDS[@]}"; do
+        CRYPT_DEV=$(blkid -U "$CRYPT_UUID")
+        gum style --bold "$CRYPT_DEV"
+        sudo systemd-cryptenroll "$CRYPT_DEV"
+        echo
+    done
+
 # enroll the TPM as an unlock method for the encrypted disk
 enroll:
     #!/usr/bin/env bash
