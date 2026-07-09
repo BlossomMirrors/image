@@ -125,6 +125,12 @@ Environment=SYSTEMD_UNIT=netbird
 WantedBy=multi-user.target
 EOF
 
+# Install Mullvad VPN from their official repo
+echo "Installing mullvad-vpn from official repo..."
+dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
+dnf config-manager setopt mullvad-stable.enabled=0
+dnf -y install --enablerepo='mullvad-stable' mullvad-vpn
+
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
 
