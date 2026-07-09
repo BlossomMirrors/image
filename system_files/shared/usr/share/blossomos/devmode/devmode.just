@@ -23,6 +23,5 @@ enable:
     fi
 
     sudo -v
-    gum spin --spinner meter --show-error --title "Switching to ${TARGET}" -- \
-        sudo bootc switch "${REGISTRY}:${TARGET}"
+    sudo bootc switch "${REGISTRY}:${TARGET}"
     gum style --foreground 2 "Switched to ${TARGET}. Reboot to apply."
