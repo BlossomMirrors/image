@@ -3,7 +3,7 @@ status:
     #!/usr/bin/env bash
     set -e
 
-    mapfile -t UUIDS < <(awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
+    mapfile -t UUIDS < <(sudo awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
     if [[ ${#UUIDS[@]} -eq 0 ]]; then
         gum style --foreground 1 "No encrypted device found in /etc/crypttab"
         exit 1
@@ -21,7 +21,7 @@ enroll:
     #!/usr/bin/env bash
     set -e
 
-    mapfile -t UUIDS < <(awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
+    mapfile -t UUIDS < <(sudo awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
     if [[ ${#UUIDS[@]} -eq 0 ]]; then
         gum style --foreground 1 "No encrypted device found in /etc/crypttab"
         exit 1
@@ -44,7 +44,7 @@ wipe:
     #!/usr/bin/env bash
     set -e
 
-    mapfile -t UUIDS < <(awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
+    mapfile -t UUIDS < <(sudo awk '$1 !~ /^#/ && NF {print $2}' /etc/crypttab | sed 's/^UUID=//')
     if [[ ${#UUIDS[@]} -eq 0 ]]; then
         gum style --foreground 1 "No encrypted device found in /etc/crypttab"
         exit 1
