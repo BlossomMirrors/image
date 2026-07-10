@@ -125,6 +125,39 @@ Environment=SYSTEMD_UNIT=netbird
 WantedBy=multi-user.target
 EOF
 
+# Install Mullvad VPN from their official repo
+echo "Installing mullvad-vpn from official repo..."
+dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
+dnf config-manager setopt mullvad-stable.enabled=0
+dnf5 download --destdir=/tmp/mullvad --enablerepo='mullvad-stable' mullvad-vpn
+# rpm -i below does not resolve dependencies like dnf install would
+dnf5 -y install dbus-libs libXScrnSaver libnotify
+# /opt is a symlink to /var/opt in this base image, and /var/opt does not exist yet
+# at this point in the build, so the rpm cannot unpack its /opt/Mullvad VPN payload
+mkdir -p /var/opt
+rpm -i --noscripts /tmp/mullvad/MullvadVPN*.rpm
+rm -rf /tmp/mullvad
+
+# clean-stage.sh wipes /opt at the end of the build for downstream image compatibility,
+# so anything left there would be silently dropped. Move the app into /usr/lib/opt instead
+# and repoint the desktop entry and service unit that reference its old location.
+mkdir -p /usr/lib/opt
+mv "/var/opt/Mullvad VPN" "/usr/lib/opt/Mullvad VPN"
+rmdir /var/opt
+
+# hidden from the app launcher until adjust vpn mullvad copies it into the
+# user's local applications directory, matching the disabled by default services
+sed -i 's#/opt/Mullvad VPN#/usr/lib/opt/Mullvad VPN#' /usr/share/applications/mullvad-vpn.desktop
+mv /usr/share/applications/mullvad-vpn.desktop /usr/share/applications/mullvad-vpn.desktop.bak
+sed -i \
+    -e 's#/opt/Mullvad\x20VPN#/usr/lib/opt/Mullvad\x20VPN#' \
+    -e 's#/opt/Mullvad VPN#/usr/lib/opt/Mullvad VPN#' \
+    /usr/lib/systemd/system/mullvad-daemon.service
+
+# rpm's postinstall scriptlet normally sets this, but --noscripts skips it.
+# The setuid bit lets split tunneling work for unprivileged users.
+chmod u+s /usr/bin/mullvad-exclude
+
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
 
@@ -132,6 +165,17 @@ echo "Installing COPR packages with isolated repo enablement..."
 copr_install_isolated "ublue-os/staging" \
     "fw-fanctrl" \
     "plasma-setup"
+
+# fw-fanctrl's periodic EC fan-duty writes (enabled by the cros_ec_hwmon PWM
+# patches in fw16 patches/) can contend with USB-PD/typec renegotiation on
+# the same EC command bus and has been observed to keep eGPU enclosures from
+# powering on when hotplugged. Lower the write frequency as a general
+# mitigation; blossomos-fanctrl-pause.service covers the hotplug window itself.
+if [[ -f /etc/fw-fanctrl/config.json ]]; then
+    jq '.strategies |= map_values(.fanSpeedUpdateFrequency = 10)' \
+        /etc/fw-fanctrl/config.json > /tmp/fw-fanctrl-config.json
+    mv /tmp/fw-fanctrl-config.json /etc/fw-fanctrl/config.json
+fi
 
 # From ublue-os/packages
 copr_install_isolated "ublue-os/packages" \
@@ -162,6 +206,16 @@ copr_install_isolated "lizardbyte/beta" \
 copr_install_isolated "peterwu/rendezvous" \
     "bibata-cursor-themes"
 
+# KDE Beta COPR
+# KDE_BETA_COPR="@kdesig/kde-beta"
+# KDE_BETA_REPO="copr:copr.fedorainfracloud.org:group_kdesig:kde-beta"
+# dnf5 -y copr enable "$KDE_BETA_COPR"
+# dnf5 -y copr disable "$KDE_BETA_COPR"
+# dnf5 versionlock delete "qt6-*" 2>/dev/null || true
+# dnf5 versionlock delete "plasma-desktop" 2>/dev/null || true
+# dnf5 upgrade --skip-unavailable -y --enablerepo="$KDE_BETA_REPO"
+# dnf5 group install --skip-unavailable -y --enablerepo="$KDE_BETA_REPO" "KDE Plasma Workspaces"
+
 # Packages to exclude - common to all versions
 EXCLUDED_PACKAGES=(
     sddm
@@ -181,10 +235,11 @@ EXCLUDED_PACKAGES=(
     krfb-libs
     plasma-discover-kns
     plasma-discover-rpm-ostree
-    plasma-welcome-fedora
     plasma-welcome
+    plasma-welcome-fedora
     podman-docker
     kaddressbook
+    fcitx
 )
 
 # Version-specific package exclusions
@@ -227,9 +282,7 @@ rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/
 #    dnf5 upgrade --refresh --advisory=FEDORA-2024-dd2e9fb225
 #fi
 
-# Explicitly install KDE Plasma related packages with the same version as in base image
-dnf -y install \
-    plasma-firewall-$(rpm -q --qf "%{VERSION}" plasma-desktop)
+dnf -y install plasma-firewall
 
 # Install DX specific packages
 if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then

@@ -13,10 +13,16 @@ systemctl enable plasma-setup.service
 systemctl enable rpm-ostree-countme.service
 systemctl disable tailscaled.service
 systemctl disable netbird.service
+systemctl disable mullvad-daemon.service
+systemctl disable mullvad-early-boot-blocking.service
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
+systemctl enable blossomos-dualboot-detect.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
+
+# Enable kAirPods user service for all users
+systemctl --global enable kairpodsd.service
 
 # Nuke possible Fedora flatpak repos
 systemctl enable flatpak-nuke-fedora.service
@@ -43,7 +49,7 @@ rm -f /usr/lib64/qt6/plugins/plasma/kcms/systemsettings/kcm_updates.so
 # We only need to clean up repos that were enabled during the build process.
 
 # Disable third-party repos
-for repo in fedora-multimedia tailscale netbird fedora-cisco-openh264; do
+for repo in fedora-multimedia tailscale netbird mullvad fedora-cisco-openh264; do
     if [[ -f "/etc/yum.repos.d/${repo}.repo" ]]; then
         sed -i 's@enabled=1@enabled=0@g' "/etc/yum.repos.d/${repo}.repo"
     fi

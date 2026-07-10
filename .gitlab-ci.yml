@@ -13,6 +13,8 @@ variables:
   before_script:
     - cp "$COSIGN_PRIVATE_KEY" cosign.key
     - echo "$CI_REGISTRY_PASSWORD" | podman login registry.blossomos.org -u "$CI_REGISTRY_USER" --password-stdin
+  after_script:
+    - sudo podman system prune -af
 
 # latest (main branch + schedule + manual)
 
@@ -23,7 +25,7 @@ build-generic-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo ./build.sh latest generic
+    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest generic
 
 build-nvidia-latest:
   extends: .build_base
@@ -32,7 +34,7 @@ build-nvidia-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo ./build.sh latest nvidia
+    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia
 
 # prerelease
 
@@ -41,14 +43,14 @@ build-generic-prerelease:
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo ./build.sh prerelease generic
+    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease generic
 
 build-nvidia-prerelease:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo ./build.sh prerelease nvidia
+    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia
 
 # release
 

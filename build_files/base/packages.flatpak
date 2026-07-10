@@ -10,11 +10,15 @@ org.mozilla.Thunderbird
 org.gimp.GIMP
 org.videolan.VLC
 net.displaycal.DisplayCAL
+org.kde.gwenview
 
 # Utilities
 io.github.nokse22.Exhibit
 net.imput.helium blossomos
+org.kde.kalk
 org.kde.kclock
+org.kde.kweather
+org.kde.qrca
 org.qbittorrent.qBittorrent
 
 # Remote Desktop
@@ -25,3 +29,6 @@ org.kde.knights
 org.kde.kpat
 org.kde.kmahjongg
 org.kde.kmines
+
+# BlossomUI
+org.kde.KStyle.BlossomUI blossomos

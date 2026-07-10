@@ -67,6 +67,8 @@ echo "Checking other third-party repositories..."
 OTHER_REPOS=(
     "fedora-multimedia.repo"
     "tailscale.repo"
+    "netbird.repo"
+    "mullvad.repo"
     "vscode.repo"
     "docker-ce.repo"
     "fedora-cisco-openh264.repo"

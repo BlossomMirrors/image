@@ -4,23 +4,13 @@ echo "::group:: ===$(basename "$0")==="
 
 set -ouex pipefail
 
-BLOSSOM_REPO_URL="${BLOSSOM_REPO_URL:-https://repo.blossomos.org/rpm/}"
+#shellcheck source=build_files/shared/blossom-repo.sh
+source /ctx/build_files/shared/blossom-repo.sh
 
-REPO_ID="blossomos-main"
-REPO_NAME="BlossomOS Main"
-
-# Import GPG key
-rpm --import https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub
+REPO_ID="${BLOSSOM_REPO_ID}"
 
 # Add repo (disabled — installed packages use --enablerepo)
-cat > /etc/yum.repos.d/blossom.repo << EOF
-[${REPO_ID}]
-name=${REPO_NAME}
-baseurl=${BLOSSOM_REPO_URL}
-enabled=0
-gpgcheck=1
-gpgkey=https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub
-EOF
+blossom_repo_setup
 
 # Remove conflicting packages from RPM DB only — files live in ostree layer and
 # cannot be deleted by a normal transaction
@@ -31,26 +21,35 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    blossomos-webapps \
+    blossomos-skel \
     blossomui \
     blossom-sound-theme \
+    blossom-kcm-software-update \
+    quick-appearance-kcm \
     atuin \
     umu-launcher \
     adjust \
     pkglayer \
-    blossomos-kinfocenter \
     kwin-pen-cursor \
     micro \
     python3-pip
+
+# Replace stock kinfocenter with our BlossomOS-patched build
+mkdir -p /tmp/blossom-kinfocenter
+dnf5 download --destdir=/tmp/blossom-kinfocenter --disablerepo='*' --enablerepo="${REPO_ID}" kinfocenter
+dnf5 install -y /tmp/blossom-kinfocenter/*.rpm
+rm -rf /tmp/blossom-kinfocenter
 
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
-# blossomos-shellconfig conflicts with bash/zsh over /etc/skel/.bashrc and
-# .zshrc; dnf5 has no --replacefiles flag so install via rpm directly
-dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig
-rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm
+# blossomos-shellconfig and plasma-patches-blossom conflict with existing files;
+# dnf5 has no --replacefiles flag so install via rpm directly
+dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig plasma-patches-blossom
+rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm /tmp/blossom/plasma-patches-blossom*.rpm
 rm -rf /tmp/blossom
 
 # Add BlossomOS Flatpak remote
