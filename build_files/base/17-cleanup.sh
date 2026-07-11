@@ -19,6 +19,7 @@ systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-dualboot-detect.service
 systemctl enable blossomos-flatpak-overrides.service
+systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
 

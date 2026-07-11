@@ -1,7 +1,14 @@
 #!/usr/bin/bash
-# Apply system-wide flatpak overrides that flatpak's sandboxing model has no
-# other way to express. Idempotent, safe to re-run every boot.
+# Apply flatpak overrides that flatpak's sandboxing model has no other way to
+# express. Idempotent, safe to re-run every boot/login.
+#
+# Takes the flatpak override scope flag as $1 (--system or --user). Both
+# scopes need it: --system only reaches flatpaks installed system-wide,
+# --user only reaches flatpaks installed per-user, and both installation
+# kinds are common on BlossomOS.
 set -euo pipefail
+
+SCOPE="$1"
 
 # org.blossomos.style is a QQC2 (QML) style shipped via the org.kde.KStyle.BlossomUI
 # flatpak extension. The KDE runtime's KStyle extension point only merges the
@@ -9,5 +16,5 @@ set -euo pipefail
 # the mounted style directory never lands in QML2_IMPORT_PATH on its own. Apps built
 # against org.kde.Platform get QML2_IMPORT_PATH=/app/lib/qml by default; append the
 # extension mount so QtQuick Controls apps can resolve org.blossomos.style.
-flatpak override --system \
+flatpak override "${SCOPE}" \
     --env=QML2_IMPORT_PATH=/app/lib/qml:/usr/share/runtime/lib/plugins/BlossomUI/lib/qml
