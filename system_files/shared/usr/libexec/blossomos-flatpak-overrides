@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+# Apply system-wide flatpak overrides that flatpak's sandboxing model has no
+# other way to express. Idempotent, safe to re-run every boot.
+set -euo pipefail
+
+# org.blossomos.style is a QQC2 (QML) style shipped via the org.kde.KStyle.BlossomUI
+# flatpak extension. The KDE runtime's KStyle extension point only merges the
+# QWidget style plugin into QT_PLUGIN_PATH, it has no equivalent for QML styles, so
+# the mounted style directory never lands in QML2_IMPORT_PATH on its own. Apps built
+# against org.kde.Platform get QML2_IMPORT_PATH=/app/lib/qml by default; append the
+# extension mount so QtQuick Controls apps can resolve org.blossomos.style.
+flatpak override --system \
+    --env=QML2_IMPORT_PATH=/app/lib/qml:/usr/share/runtime/lib/plugins/BlossomUI/lib/qml

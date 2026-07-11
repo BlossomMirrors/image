@@ -1,0 +1,11 @@
+[Unit]
+Description=BlossomOS Flatpak Overrides
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-flatpak-overrides
+
+[Install]
+WantedBy=multi-user.target
