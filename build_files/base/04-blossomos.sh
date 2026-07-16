@@ -27,6 +27,9 @@ dnf5 -y install \
     blossom-sound-theme \
     blossom-kcm-software-update \
     quick-appearance-kcm \
+    dmemcg-booster \
+    kcgroups-dmemcg \
+    plasma-foreground-booster \
     atuin \
     umu-launcher \
     adjust \

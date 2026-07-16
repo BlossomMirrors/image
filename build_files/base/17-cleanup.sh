@@ -15,6 +15,12 @@ systemctl disable tailscaled.service
 systemctl disable netbird.service
 systemctl disable mullvad-daemon.service
 systemctl disable mullvad-early-boot-blocking.service
+# systemd-oomd's default cgroup pressure thresholds kill foreground apps
+# (Plasma, browser tabs) too eagerly under memory pressure before MGLRU's
+# working-set protection gets a chance to help. Disable it; the kernel's own
+# OOM killer remains as the last resort.
+systemctl disable systemd-oomd.service
+systemctl disable systemd-oomd.socket
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-dualboot-detect.service
@@ -22,6 +28,13 @@ systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
+
+# dmem cgroup VRAM prioritization for foreground apps (games). No-op without
+# a kernel that supports the dmem cgroup controller, see kernel-blossomos'
+# cachyos patchset. plasma-foreground-booster.service has no [Install]
+# section; it's autostarted via its KDE autostart .desktop entry instead.
+systemctl enable dmemcg-booster-system.service
+systemctl --global enable dmemcg-booster-user.service
 
 # Enable kAirPods user service for all users
 systemctl --global enable kairpodsd.service
