@@ -14,7 +14,7 @@ source /ctx/build_files/shared/copr-helpers.sh
 # ublue-os akmods image, whose ostree.linux label carries a fc44 dist tag,
 # but repo.blossomos.org's kernel package NVR does not carry one. Bump this
 # by hand whenever a new kernel build is published to repo.blossomos.org.
-BLOSSOM_KERNEL_VERSION="7.0.13-200"
+BLOSSOM_KERNEL_VERSION="7.1.3-201"
 
 blossom_repo_setup
 
