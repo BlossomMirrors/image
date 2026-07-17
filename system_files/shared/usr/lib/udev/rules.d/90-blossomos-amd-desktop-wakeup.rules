@@ -1,0 +1,37 @@
+# Some AMD AM4/AM5 desktop motherboards have BIOS/DSDT bugs where a PCIe
+# root port (the "GPP" bridge feeding the M.2/NVMe slot) or the xHCI USB
+# controller asserts a spurious ACPI wake event right after suspend, so the
+# system wakes itself back up instead of actually standing by. The confirmed
+# community fix is disabling ACPI wakeup on the offending controller; each
+# rule below is scoped to the exact board_name it's documented against, so
+# unaffected hardware (including other boards from the same vendors) is
+# never touched — an unmatched board_name is a silent no-op, not a
+# misfire. If your board isn't listed but hits the same symptom, check
+# `dmidecode -s baseboard-product-name` and add a matching line.
+# See: https://wiki.archlinux.org/title/Power_management/Wakeup_triggers
+#
+# Note: a broader set of Gigabyte/MSI B650/X670/B850/X870 boards need the
+# "acpi_osi=\"!Windows 2015\"" kernel parameter instead (disabling GPP0/GPP1
+# wakeup alone isn't enough for them). That's a global ACPI compatibility
+# override with its own risk of regressions on unrelated hardware, so it's
+# intentionally not baked into the image — affected users should add it
+# themselves via `rpm-ostree kargs` / `bootc kargs`.
+
+# Gigabyte B550/A520: GPP0 (NVMe slot bridge) wakes the system immediately
+# after suspend.
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="B550i AORUS", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="B550 AORUS ELITE V2", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="B550 AORUS ELITE AX V2", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="B550M DS3H", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="B550M AORUS PRO-P", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="A520M K V2", ATTR{power/wakeup}="disabled"
+
+# ASRock AM5 (B850): XH00 (xHCI USB controller) wakes the system immediately
+# after suspend.
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="xhci_hcd", ATTR{[dmi/id]board_name}=="B850M Pro-A WiFi", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="xhci_hcd", ATTR{[dmi/id]board_name}=="B850M Pro RS", ATTR{power/wakeup}="disabled"
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="xhci_hcd", ATTR{[dmi/id]board_name}=="B850M Pro RS WiFi", ATTR{power/wakeup}="disabled"
+
+# MSI AM5 (X870): GPP1 (NVMe slot bridge) wakes the system immediately after
+# suspend.
+ACTION=="add", SUBSYSTEM=="pci", DRIVER=="pcieport", ATTR{[dmi/id]board_name}=="X870 Tomahawk", ATTR{power/wakeup}="disabled"
