@@ -240,6 +240,7 @@ EXCLUDED_PACKAGES=(
     podman-docker
     kaddressbook
     fcitx
+    isoimagewriter
 )
 
 # Version-specific package exclusions

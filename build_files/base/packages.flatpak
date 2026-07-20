@@ -20,6 +20,7 @@ org.kde.kclock
 org.kde.kweather
 org.kde.qrca
 org.qbittorrent.qBittorrent
+org.kde.isoimagewriter
 
 # Remote Desktop
 com.rustdesk.RustDesk
