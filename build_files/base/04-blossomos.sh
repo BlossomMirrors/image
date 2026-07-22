@@ -30,6 +30,7 @@ dnf5 -y install \
     dmemcg-booster \
     kcgroups-dmemcg \
     plasma-foreground-booster \
+    goxlr-utility \
     atuin \
     umu-launcher \
     adjust \
