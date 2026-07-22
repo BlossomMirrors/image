@@ -33,3 +33,5 @@ org.kde.kmines
 
 # BlossomUI
 org.kde.KStyle.BlossomUI blossomos
+org.freedesktop.Platform.Icontheme.BlossomUI blossomos
+org.gtk.Gtk3theme.BlossomUI blossomos
