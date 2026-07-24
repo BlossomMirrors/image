@@ -71,6 +71,9 @@ build_and_push() {
     REMOTE_TAG="${TAG}${VARIANT_SUFFIX}${dx_suffix}"
     REMOTE_REF="${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${REMOTE_TAG}"
 
+    # Digest currently sitting behind the tag, so it can be cleaned up once replaced
+    OLD_DIGEST="$(skopeo inspect --format '{{.Digest}}' "docker://${REMOTE_REF}" 2>/dev/null || true)"
+
     echo "==> Building ${LOCAL_REF} -> ${REMOTE_REF}"
     just build "${image}" "${BUILD_TAG}" "${FLAVOR}"
 
@@ -90,6 +93,16 @@ build_and_push() {
     COSIGN_PASSWORD="" cosign sign --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
 
     echo "==> Done: ${REMOTE_REF} (${DIGEST})"
+
+    # Push and sign succeeded, so the previous digest behind this tag is now
+    # dangling. Remove it (and its cosign signature) to keep the registry from
+    # accumulating an orphaned image on every rebuild.
+    if [[ -n "${OLD_DIGEST}" && "${OLD_DIGEST}" != "${DIGEST}" ]]; then
+        OLD_SIG_TAG="${OLD_DIGEST/:/-}.sig"
+        echo "==> Cleaning up superseded digest: ${OLD_DIGEST}"
+        skopeo delete "docker://${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${OLD_SIG_TAG}" 2>/dev/null || true
+        skopeo delete "docker://${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}@${OLD_DIGEST}" || true
+    fi
 }
 
 build_and_push "blossomos"    ""
