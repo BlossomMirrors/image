@@ -25,6 +25,7 @@ dnf5 -y install \
     blossomos-skel \
     blossomui \
     blossom-sound-theme \
+    blossom-udev-rules \
     blossom-kcm-software-update \
     quick-appearance-kcm \
     dmemcg-booster \
