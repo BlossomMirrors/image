@@ -275,7 +275,7 @@ build-pipeline image="blossomos" tag="latest" flavor="main" kernel_pin="":
 # Rechunk Image
 [group('Image')]
 [private]
-rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0":
+rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0" $prev_ref="":
     #!/usr/bin/bash
 
     echo "::group:: Rechunk Prep"
@@ -395,7 +395,7 @@ rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0":
         --volume "$PWD:/var/git" \
         --volume cache_ostree:/var/ostree \
         --env REPO=/var/ostree/repo \
-        --env PREV_REF={{ registry }}/blossomos/"${image_name}":"${tag}" \
+        --env PREV_REF="${prev_ref:-{{ registry }}/blossomos/${image_name}:${tag}}" \
         --env OUT_NAME="$OUT_NAME" \
         --env LABELS="${LABELS}" \
         --env "DESCRIPTION='BlossomOS'" \

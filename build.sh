@@ -77,6 +77,13 @@ build_and_push() {
     echo "==> Building ${LOCAL_REF} -> ${REMOTE_REF}"
     just build "${image}" "${BUILD_TAG}" "${FLAVOR}"
 
+    # Rechunk against the currently published REMOTE_REF so unchanged layers
+    # keep the same digest and neither clients nor the registry accumulate a
+    # full new image on every build.
+    echo "==> Rechunking ${LOCAL_REF} against ${REMOTE_REF}"
+    just rechunk "${image}" "${BUILD_TAG}" "${FLAVOR}" 0 0 "${REMOTE_REF}"
+    just load-rechunk "${image}" "${BUILD_TAG}" "${FLAVOR}"
+
     echo "==> Tagging ${LOCAL_REF} -> ${REMOTE_REF}"
     podman tag "${LOCAL_REF}" "${REMOTE_REF}"
 
@@ -97,12 +104,12 @@ build_and_push() {
     # Push and sign succeeded, so the previous digest behind this tag is now
     # dangling. Remove it (and its cosign signature) to keep the registry from
     # accumulating an orphaned image on every rebuild.
-    if [[ -n "${OLD_DIGEST}" && "${OLD_DIGEST}" != "${DIGEST}" ]]; then
-        OLD_SIG_TAG="${OLD_DIGEST/:/-}.sig"
-        echo "==> Cleaning up superseded digest: ${OLD_DIGEST}"
-        skopeo delete "docker://${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${OLD_SIG_TAG}" 2>/dev/null || true
-        skopeo delete "docker://${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}@${OLD_DIGEST}" || true
-    fi
+    # if [[ -n "${OLD_DIGEST}" && "${OLD_DIGEST}" != "${DIGEST}" ]]; then
+    #     OLD_SIG_TAG="${OLD_DIGEST/:/-}.sig"
+    #     echo "==> Cleaning up superseded digest: ${OLD_DIGEST}"
+    #     skopeo delete "docker://${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${OLD_SIG_TAG}" 2>/dev/null || true
+    #     skopeo delete "docker://${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}@${OLD_DIGEST}" || true
+    # fi
 }
 
 build_and_push "blossomos"    ""
