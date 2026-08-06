@@ -1,0 +1,25 @@
+#!/usr/bin/bash
+# Re-import the BlossomOS flatpak remote's trusted GPG key from source. The
+# remote's keyring is populated once at image build time via --gpg-import and
+# never touched again, so a key rotation on the server (planned, or forced by
+# a lost/compromised key) would otherwise leave every already-installed system
+# unable to verify new flatpak commits until it's reinstalled. Running this
+# periodically keeps already-installed systems in sync with whatever key is
+# currently published, without requiring a full OS reinstall.
+set -euo pipefail
+
+KEY_URL="https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub"
+TMP_KEY=$(mktemp)
+trap 'rm -f "$TMP_KEY"' EXIT
+
+if ! curl -fsSL "$KEY_URL" -o "$TMP_KEY"; then
+    echo "blossomos-flatpak-key-refresh: could not fetch $KEY_URL, skipping" >&2
+    exit 0
+fi
+
+if ! flatpak remotes --system --columns=name | grep -qx blossomos; then
+    echo "blossomos-flatpak-key-refresh: blossomos remote not present, skipping" >&2
+    exit 0
+fi
+
+flatpak remote-modify --system --gpg-import="$TMP_KEY" blossomos

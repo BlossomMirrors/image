@@ -29,6 +29,11 @@ systemctl --global enable kairpodsd.service
 # Nuke possible Fedora flatpak repos
 systemctl enable flatpak-nuke-fedora.service
 
+# Keep the blossomos flatpak remote's trusted GPG key in sync with what's
+# currently published, so a server-side key rotation doesn't leave already
+# installed systems stuck trusting a stale key
+systemctl enable blossomos-flatpak-key-refresh.timer
+
 # disable sunshine service
 systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 

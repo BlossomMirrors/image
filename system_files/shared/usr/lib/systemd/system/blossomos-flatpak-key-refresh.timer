@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodically refresh BlossomOS flatpak remote GPG key
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1d
+Persistent=true
+
+[Install]
+WantedBy=timers.target
