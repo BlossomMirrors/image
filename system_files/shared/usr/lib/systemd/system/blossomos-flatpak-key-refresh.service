@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh BlossomOS flatpak remote GPG key
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/blossomos-flatpak-key-refresh
