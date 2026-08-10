@@ -86,20 +86,6 @@ dnf -y install --enablerepo=docker-ce-stable \
     docker-compose-plugin \
     docker-model-plugin
 
-# VSCode package from Microsoft repo
-echo "Installing VSCode from official repo..."
-tee /etc/yum.repos.d/vscode.repo <<'EOF'
-[code]
-name=Visual Studio Code
-baseurl=https://packages.microsoft.com/yumrepos/vscode
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-EOF
-sed -i "s/enabled=.*/enabled=0/g" /etc/yum.repos.d/vscode.repo
-dnf -y install --enablerepo=code \
-    code
-
 # DX Copr packages using isolated enablement (secure)
 echo "Installing DX COPR packages with isolated repo enablement..."
 
@@ -133,7 +119,6 @@ if rpm -q docker-ce >/dev/null; then
 fi
 systemctl enable podman.socket
 systemctl enable blossomos-dx-groups.service
-systemctl enable --global blossomos-dx-user-vscode.service
 
 # Disable RPM Fusion repos
 for i in /etc/yum.repos.d/rpmfusion-*.repo; do

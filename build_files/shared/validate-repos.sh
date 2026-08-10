@@ -69,7 +69,6 @@ OTHER_REPOS=(
     "tailscale.repo"
     "netbird.repo"
     "mullvad.repo"
-    "vscode.repo"
     "docker-ce.repo"
     "fedora-cisco-openh264.repo"
     "fedora-coreos-pool.repo"
