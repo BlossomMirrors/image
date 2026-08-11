@@ -61,7 +61,7 @@ rm -rf /tmp/blossom
 curl -fsSL https://repo.blossomos.org/BLOSSOMOS-GPG-KEY.pub -o /tmp/flatpak-repo-key.asc
 flatpak remote-add --system --if-not-exists \
     --gpg-import=/tmp/flatpak-repo-key.asc \
-    blossomos https://repo.blossomos.org/flatpak
+    blossomos https://forge.blossomos.org/flatpak
 rm -f /tmp/flatpak-repo-key.asc
 
 echo "::endgroup::"
