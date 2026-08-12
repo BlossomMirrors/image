@@ -67,7 +67,6 @@ fi
 
 dnf5 config-manager setopt fedora-nvidia*.enabled=0 nvidia-container-toolkit.enabled=0
 
-systemctl enable ublue-nvctk-cdi.service
 semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
 
 # force driver load to fix black screen on boot for nvidia desktops, and
