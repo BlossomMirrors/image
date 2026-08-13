@@ -1,6 +1,9 @@
 # BlossomOS Flatpak package list
 # Read by 03-fetch.sh — generates preinstall files in /usr/share/flatpak/preinstall.d/
 # One app ID per line, comments and blank lines ignored
+# Format: <app_id> [remote] [branch] — remote adds Origin=, branch overrides the
+# default "stable" (needed for the blossomos remote, which doesn't use Flathub's
+# stable/beta branch convention)
 
 # Office / Productivity
 org.libreoffice.LibreOffice
@@ -32,6 +35,8 @@ org.kde.kmahjongg
 org.kde.kmines
 
 # BlossomUI
-org.kde.KStyle.BlossomUI blossomos
-org.freedesktop.Platform.Icontheme.BlossomUI blossomos
-org.gtk.Gtk3theme.BlossomUI blossomos
+# org.kde.KStyle.BlossomUI is handled by blossomos-flatpak-kstyle-branches
+# instead: preinstall.d only supports one branch per app id, and this one
+# needs all three of its published branches installed at once
+org.freedesktop.Platform.Icontheme.BlossomUI blossomos 1.0
+org.gtk.Gtk3theme.BlossomUI blossomos 3.22

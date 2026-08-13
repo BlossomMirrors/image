@@ -47,6 +47,15 @@ systemctl enable flatpak-nuke-fedora.service
 # installed systems stuck trusting a stale key
 systemctl enable blossomos-flatpak-key-refresh.timer
 
+# Nothing on this image otherwise runs `flatpak preinstall`, so
+# packages.flatpak's preinstall.d entries would never reach machines that
+# were already provisioned before an entry was added
+systemctl enable flatpak-preinstall.service
+
+# org.kde.KStyle.BlossomUI needs all three of its branches installed at
+# once, which preinstall.d can't express (one branch per app id)
+systemctl enable blossomos-flatpak-kstyle-branches.service
+
 # disable sunshine service
 systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 

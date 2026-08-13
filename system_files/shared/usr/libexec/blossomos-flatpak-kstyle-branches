@@ -1,0 +1,14 @@
+#!/usr/bin/bash
+# preinstall.d only supports one branch per app id, but org.kde.KStyle.BlossomUI
+# needs all three (one per org.kde.Platform runtime version) installed at once.
+set -euo pipefail
+
+if ! flatpak remotes --system --columns=name | grep -qx blossomos; then
+    echo "blossomos-flatpak-kstyle-branches: blossomos remote not present, skipping" >&2
+    exit 0
+fi
+
+flatpak install --system -y --noninteractive blossomos \
+    org.kde.KStyle.BlossomUI//5.15-24.08 \
+    org.kde.KStyle.BlossomUI//6.9 \
+    org.kde.KStyle.BlossomUI//6.10
