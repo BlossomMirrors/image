@@ -241,6 +241,7 @@ EXCLUDED_PACKAGES=(
     kaddressbook
     fcitx
     isoimagewriter
+    kamoso
 )
 
 # Version-specific package exclusions
