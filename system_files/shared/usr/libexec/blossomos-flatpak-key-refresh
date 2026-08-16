@@ -23,4 +23,4 @@ if ! flatpak remotes --system --columns=name | grep -qx blossomos; then
 fi
 
 flatpak remote-modify --system --gpg-import="$TMP_KEY" blossomos
-flatpak remote-modify --system --url="https://forge.blossomos.org/flatpak" blossomos
+flatpak remote-modify --system --url="https://forge.arcstore.net/flatpak" blossomos
