@@ -2,25 +2,16 @@
 
 set -oue pipefail
 
-grub_defaults="/etc/default/grub"
 version_stamp="/etc/blossomos-grub-migrate.version"
-current_version=2
 
-touch "$grub_defaults"
-
-# Lets a user's own edits to grub_defaults stick between runs. The daemon
-# only touches it again once current_version is bumped by a future release.
-applied_version=0
+# Lets a user's own edits to /etc/default/grub stick afterwards. The daemon
+# runs once per boot but only actually migrates if this stamp is missing.
 if [[ -f "$version_stamp" ]]; then
-    stamp_contents="$(<"$version_stamp")"
-    if [[ "$stamp_contents" =~ ^[0-9]+$ ]]; then
-        applied_version="$stamp_contents"
-    fi
-fi
-
-if ((applied_version >= current_version)); then
     exit 0
 fi
+
+grub_defaults="/etc/default/grub"
+touch "$grub_defaults"
 
 set_grub_default() {
     if grep -q "^$1=" "$grub_defaults"; then
@@ -30,46 +21,43 @@ set_grub_default() {
     fi
 }
 
-migrate_to_1() {
-    # Without this a regenerated config drops the BLS entries and the system
-    # has nothing left to boot.
-    set_grub_default GRUB_ENABLE_BLSCFG true
+# Without this a regenerated config drops the BLS entries and the system
+# has nothing left to boot.
+set_grub_default GRUB_ENABLE_BLSCFG true
 
-    # Plymouth
-    set_grub_default GRUB_CMDLINE_LINUX_DEFAULT '"quiet splash"'
-    set_grub_default GRUB_GFXPAYLOAD_LINUX keep
+# Plymouth
+set_grub_default GRUB_CMDLINE_LINUX_DEFAULT '"quiet splash"'
+set_grub_default GRUB_GFXPAYLOAD_LINUX keep
 
-    # grub 2.06 and later skip 30_os-prober entirely unless this is false.
-    set_grub_default GRUB_DISABLE_OS_PROBER false
-}
+# grub 2.06 and later skip 30_os-prober entirely unless this is false.
+set_grub_default GRUB_DISABLE_OS_PROBER false
 
-migrate_to_2() {
-    # A short static menu instead of os-prober driven detection.
-    # blossomos-dualboot-detect.service already handles Windows on its own
-    # through custom.cfg, so this just needs a sane default timeout.
+# os-prober also reports the system we just installed, since anaconda has the
+# target root mounted while this runs. Drop our own device from the results.
+self_dev="$(findmnt -no SOURCE / 2>/dev/null || true)"
+self_dev="${self_dev%%[*}"
+other_os="$(os-prober 2>/dev/null || true)"
+if [[ -n "$self_dev" && -n "$other_os" ]]; then
+    other_os="$(grep -v "^${self_dev}:" <<<"$other_os" || true)"
+fi
+
+# Boot straight through on a single OS machine, but show a real menu when something else is installed so it can actually be selected.
+if [[ -n "$other_os" ]]; then
+    echo "Other operating systems detected, enabling the GRUB menu:"
+    echo "$other_os"
     set_grub_default GRUB_TIMEOUT 5
     set_grub_default GRUB_TIMEOUT_STYLE menu
-
     # menu_auto_hide comes from the anaconda profile and would hide the menu
-    # again regardless of the timeout above.
+    # again regardless of the timeout.
     for grubenv in /boot/grub2/grubenv /boot/efi/EFI/fedora/grubenv; do
         if [[ -f "$grubenv" ]]; then
             grub2-editenv "$grubenv" unset menu_auto_hide || true
         fi
     done
-}
-
-if ((applied_version < 1)); then
-    echo "Migrating GRUB defaults to version 1..."
-    migrate_to_1
+else
+    set_grub_default GRUB_TIMEOUT 0
+    set_grub_default GRUB_TIMEOUT_STYLE hidden
 fi
-
-if ((applied_version < 2)); then
-    echo "Migrating GRUB defaults to version 2..."
-    migrate_to_2
-fi
-
-echo "$current_version" >"$version_stamp"
 
 # The kernel cmdline itself comes from the BLS entries on an ostree system, so quiet splash is applied via bootloader append in the kickstart.
 grub_cfg="/boot/grub2/grub.cfg"
@@ -77,3 +65,5 @@ if [[ ! -f "$grub_cfg" ]]; then
     grub_cfg="/boot/efi/EFI/fedora/grub.cfg"
 fi
 grub2-mkconfig -o "$grub_cfg" || true
+
+echo 1 >"$version_stamp"
