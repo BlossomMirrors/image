@@ -11,4 +11,5 @@ fi
 flatpak install --system -y --noninteractive blossomos \
     org.kde.KStyle.BlossomUI//5.15-24.08 \
     org.kde.KStyle.BlossomUI//6.9 \
-    org.kde.KStyle.BlossomUI//6.10
+    org.kde.KStyle.BlossomUI//6.10 \
+    org.kde.KStyle.BlossomUI//6.11
