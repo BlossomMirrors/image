@@ -1,0 +1,79 @@
+#!/bin/bash
+
+set -oue pipefail
+
+grub_defaults="/etc/default/grub"
+version_stamp="/etc/blossomos-grub-migrate.version"
+current_version=2
+
+touch "$grub_defaults"
+
+# Lets a user's own edits to grub_defaults stick between runs. The daemon
+# only touches it again once current_version is bumped by a future release.
+applied_version=0
+if [[ -f "$version_stamp" ]]; then
+    stamp_contents="$(<"$version_stamp")"
+    if [[ "$stamp_contents" =~ ^[0-9]+$ ]]; then
+        applied_version="$stamp_contents"
+    fi
+fi
+
+if ((applied_version >= current_version)); then
+    exit 0
+fi
+
+set_grub_default() {
+    if grep -q "^$1=" "$grub_defaults"; then
+        sed -i "s|^$1=.*|$1=$2|" "$grub_defaults"
+    else
+        echo "$1=$2" >>"$grub_defaults"
+    fi
+}
+
+migrate_to_1() {
+    # Without this a regenerated config drops the BLS entries and the system
+    # has nothing left to boot.
+    set_grub_default GRUB_ENABLE_BLSCFG true
+
+    # Plymouth
+    set_grub_default GRUB_CMDLINE_LINUX_DEFAULT '"quiet splash"'
+    set_grub_default GRUB_GFXPAYLOAD_LINUX keep
+
+    # grub 2.06 and later skip 30_os-prober entirely unless this is false.
+    set_grub_default GRUB_DISABLE_OS_PROBER false
+}
+
+migrate_to_2() {
+    # A short static menu instead of os-prober driven detection.
+    # blossomos-dualboot-detect.service already handles Windows on its own
+    # through custom.cfg, so this just needs a sane default timeout.
+    set_grub_default GRUB_TIMEOUT 5
+    set_grub_default GRUB_TIMEOUT_STYLE menu
+
+    # menu_auto_hide comes from the anaconda profile and would hide the menu
+    # again regardless of the timeout above.
+    for grubenv in /boot/grub2/grubenv /boot/efi/EFI/fedora/grubenv; do
+        if [[ -f "$grubenv" ]]; then
+            grub2-editenv "$grubenv" unset menu_auto_hide || true
+        fi
+    done
+}
+
+if ((applied_version < 1)); then
+    echo "Migrating GRUB defaults to version 1..."
+    migrate_to_1
+fi
+
+if ((applied_version < 2)); then
+    echo "Migrating GRUB defaults to version 2..."
+    migrate_to_2
+fi
+
+echo "$current_version" >"$version_stamp"
+
+# The kernel cmdline itself comes from the BLS entries on an ostree system, so quiet splash is applied via bootloader append in the kickstart.
+grub_cfg="/boot/grub2/grub.cfg"
+if [[ ! -f "$grub_cfg" ]]; then
+    grub_cfg="/boot/efi/EFI/fedora/grub.cfg"
+fi
+grub2-mkconfig -o "$grub_cfg" || true

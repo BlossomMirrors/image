@@ -24,6 +24,7 @@ systemctl disable systemd-oomd.socket
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-dualboot-detect.service
+systemctl enable blossomos-grub-migrate.service
 systemctl enable blossomos-bootmsg.service
 systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
