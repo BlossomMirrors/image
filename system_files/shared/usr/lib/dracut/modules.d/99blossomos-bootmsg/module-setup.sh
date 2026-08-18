@@ -10,5 +10,6 @@ depends() {
 }
 
 install() {
+    inst_simple /usr/lib/blossomos/bootmsg-text
     inst_hook pre-mount 50 "$moddir/blossomos-bootmsg.sh"
 }

@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+read -r message < /usr/lib/blossomos/bootmsg-text
+
+# the initramfs hook already set this; clear it first so it renders once
+plymouth hide-message --text="$message" || :
+plymouth display-message --text="$message" || :
