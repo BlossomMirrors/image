@@ -14,6 +14,7 @@ images := '(
 flavors := '(
     [main]=main
     [nvidia-open]=nvidia-open
+    [nvidia-legacy]=nvidia-legacy
 )'
 tags := '(
     [stable]=stable
@@ -225,7 +226,9 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     "coreos-testing") BUILD_ARGS+=("--cpp-flag=-DZFS") ;;
     esac
 
-    if [[ "${image_name}" =~ nvidia ]]; then
+    if [[ "${image_name}" =~ nvidia-legacy ]]; then
+        BUILD_ARGS+=("--cpp-flag=-DNVIDIA_LEGACY")
+    elif [[ "${image_name}" =~ nvidia ]]; then
         BUILD_ARGS+=("--cpp-flag=-DNVIDIA")
     fi
 

@@ -20,7 +20,9 @@ IMAGE_REF="${IMAGE_REF:-ostree-image-signed:docker://registry.blossomos.org/blos
 
 # Image Flavor
 image_flavor="main"
-if [[ "${IMAGE_NAME}" =~ nvidia-open ]]; then
+if [[ "${IMAGE_NAME}" =~ nvidia-legacy ]]; then
+  image_flavor="nvidia-legacy"
+elif [[ "${IMAGE_NAME}" =~ nvidia-open ]]; then
   image_flavor="nvidia-open"
 fi
 

@@ -5,36 +5,42 @@ TAG="${1:-latest}"
 VARIANT="${2:-generic}"
 
 if [[ "${TAG}" == "--help" || "${TAG}" == "-h" ]]; then
-    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia]"
+    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia|nvidia-legacy]"
     echo ""
     echo "Arguments:"
-    echo "  main|latest|prerelease   Registry tag prefix (default: latest)"
-    echo "  generic|nvidia           Hardware variant (default: generic)"
+    echo "  main|latest|prerelease           Registry tag prefix (default: latest)"
+    echo "  generic|nvidia|nvidia-legacy     Hardware variant (default: generic)"
     echo ""
     echo "Always builds both base and dx images. Resulting tags:"
-    echo "  latest          registry.blossomos.org/blossom/image:latest"
-    echo "  latest          registry.blossomos.org/blossom/image:latest-dx"
-    echo "  latest nvidia   registry.blossomos.org/blossom/image:latest-nvidia"
-    echo "  latest nvidia   registry.blossomos.org/blossom/image:latest-nvidia-dx"
-    echo "  main            registry.blossomos.org/blossom/image:main"
-    echo "  main            registry.blossomos.org/blossom/image:main-dx"
-    echo "  main nvidia     registry.blossomos.org/blossom/image:main-nvidia"
-    echo "  main nvidia     registry.blossomos.org/blossom/image:main-nvidia-dx"
-    echo "  prerelease      registry.blossomos.org/blossom/image:prerelease"
-    echo "  prerelease      registry.blossomos.org/blossom/image:prerelease-dx"
-    echo "  prerelease nvidia registry.blossomos.org/blossom/image:prerelease-nvidia"
-    echo "  prerelease nvidia registry.blossomos.org/blossom/image:prerelease-nvidia-dx"
+    echo "  latest                 registry.blossomos.org/blossom/image:latest"
+    echo "  latest                 registry.blossomos.org/blossom/image:latest-dx"
+    echo "  latest nvidia          registry.blossomos.org/blossom/image:latest-nvidia"
+    echo "  latest nvidia          registry.blossomos.org/blossom/image:latest-nvidia-dx"
+    echo "  latest nvidia-legacy   registry.blossomos.org/blossom/image:latest-nvidia-legacy"
+    echo "  latest nvidia-legacy   registry.blossomos.org/blossom/image:latest-nvidia-legacy-dx"
+    echo "  main                   registry.blossomos.org/blossom/image:main"
+    echo "  main                   registry.blossomos.org/blossom/image:main-dx"
+    echo "  main nvidia            registry.blossomos.org/blossom/image:main-nvidia"
+    echo "  main nvidia            registry.blossomos.org/blossom/image:main-nvidia-dx"
+    echo "  main nvidia-legacy     registry.blossomos.org/blossom/image:main-nvidia-legacy"
+    echo "  main nvidia-legacy     registry.blossomos.org/blossom/image:main-nvidia-legacy-dx"
+    echo "  prerelease             registry.blossomos.org/blossom/image:prerelease"
+    echo "  prerelease             registry.blossomos.org/blossom/image:prerelease-dx"
+    echo "  prerelease nvidia      registry.blossomos.org/blossom/image:prerelease-nvidia"
+    echo "  prerelease nvidia      registry.blossomos.org/blossom/image:prerelease-nvidia-dx"
+    echo "  prerelease nvidia-legacy registry.blossomos.org/blossom/image:prerelease-nvidia-legacy"
+    echo "  prerelease nvidia-legacy registry.blossomos.org/blossom/image:prerelease-nvidia-legacy-dx"
     exit 0
 fi
 
 if [[ "${TAG}" != "main" && "${TAG}" != "latest" && "${TAG}" != "prerelease" ]]; then
-    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia]"
+    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia|nvidia-legacy]"
     echo "Error: first argument must be 'main', 'latest', or 'prerelease' (got '${TAG}')"
     exit 1
 fi
-if [[ "${VARIANT}" != "generic" && "${VARIANT}" != "nvidia" ]]; then
-    echo "Usage: $0 [main|latest] [generic|nvidia]"
-    echo "Error: second argument must be 'generic' or 'nvidia' (got '${VARIANT}')"
+if [[ "${VARIANT}" != "generic" && "${VARIANT}" != "nvidia" && "${VARIANT}" != "nvidia-legacy" ]]; then
+    echo "Usage: $0 [main|latest|prerelease] [generic|nvidia|nvidia-legacy]"
+    echo "Error: second argument must be 'generic', 'nvidia', or 'nvidia-legacy' (got '${VARIANT}')"
     exit 1
 fi
 
@@ -48,6 +54,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "${VARIANT}" == "nvidia" ]]; then
     FLAVOR="nvidia-open"
     VARIANT_SUFFIX="-nvidia"
+elif [[ "${VARIANT}" == "nvidia-legacy" ]]; then
+    FLAVOR="nvidia-legacy"
+    VARIANT_SUFFIX="-nvidia-legacy"
 else
     FLAVOR="main"
     VARIANT_SUFFIX=""

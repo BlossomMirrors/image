@@ -12,12 +12,16 @@ Published to `registry.blossomos.org/blossom/image`.
 |-----|-------------|
 | `:latest` | Base desktop |
 | `:latest-dx` | Developer experience variant |
-| `:latest-nvidia` | NVIDIA open kernel module support |
-| `:latest-dx-nvidia` | Developer experience + NVIDIA |
+| `:latest-nvidia` | NVIDIA open kernel module support (Turing and newer) |
+| `:latest-nvidia-dx` | Developer experience + NVIDIA |
+| `:latest-nvidia-legacy` | NVIDIA proprietary driver, 580 LTS branch (Maxwell, Pascal, Volta) |
+| `:latest-nvidia-legacy-dx` | Developer experience + NVIDIA legacy |
 | `:main` | Base desktop (release repo) |
 | `:main-dx` | Developer experience (release repo) |
 | `:main-nvidia` | NVIDIA (release repo) |
-| `:main-dx-nvidia` | Developer experience + NVIDIA (release repo) |
+| `:main-nvidia-dx` | Developer experience + NVIDIA (release repo) |
+| `:main-nvidia-legacy` | NVIDIA legacy (release repo) |
+| `:main-nvidia-legacy-dx` | Developer experience + NVIDIA legacy (release repo) |
 
 `latest` tags use the in-development package repo. `main` tags use the stable release repo and are built on manual trigger.
 

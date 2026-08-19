@@ -36,6 +36,15 @@ build-nvidia-latest:
   script:
     - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia
 
+build-nvidia-legacy-latest:
+  extends: .build_base
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia-legacy
+
 # prerelease
 
 build-generic-prerelease:
@@ -52,6 +61,13 @@ build-nvidia-prerelease:
   script:
     - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia
 
+build-nvidia-legacy-prerelease:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+  script:
+    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia-legacy
+
 # release
 
 build-generic-release:
@@ -67,3 +83,10 @@ build-nvidia-release:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
   script:
     - sudo ./build.sh main nvidia
+
+build-nvidia-legacy-release:
+  extends: .build_base
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
+  script:
+    - sudo ./build.sh main nvidia-legacy
