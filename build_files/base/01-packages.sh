@@ -85,7 +85,7 @@ dnf5 -y install "${FEDORA_PACKAGES[@]}" "${NEGATIVO_PACKAGES[@]}"
 
 # Install tailscale package from their repo
 echo "Installing tailscale from official repo..."
-dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+dnf config-manager addrepo --overwrite --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
 dnf config-manager setopt tailscale-stable.enabled=0
 dnf -y install --enablerepo='tailscale-stable' tailscale
 
@@ -127,7 +127,7 @@ EOF
 
 # Install Mullvad VPN from their official repo
 echo "Installing mullvad-vpn from official repo..."
-dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
+dnf config-manager addrepo --overwrite --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
 dnf config-manager setopt mullvad-stable.enabled=0
 dnf5 download --destdir=/tmp/mullvad --enablerepo='mullvad-stable' mullvad-vpn
 # rpm -i below does not resolve dependencies like dnf install would
