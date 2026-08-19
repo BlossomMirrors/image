@@ -102,7 +102,7 @@ repo_gpgcheck=0
 EOF
 rpm --import https://pkgs.netbird.io/yum/repodata/repomd.xml.key
 dnf5 download --destdir=/tmp/netbird --arch="$(rpm -E '%_arch')" --enablerepo='netbird' netbird
-rpm -i --noscripts /tmp/netbird/netbird*.rpm
+rpm -i --noscripts --replacepkgs /tmp/netbird/netbird*.rpm
 rm -rf /tmp/netbird
 # netbird service install (run by %post) is skipped above because it tries to
 # start the daemon in the build context. Write the unit file it would generate.
@@ -135,7 +135,7 @@ dnf5 -y install dbus-libs libXScrnSaver libnotify
 # /opt is a symlink to /var/opt in this base image, and /var/opt does not exist yet
 # at this point in the build, so the rpm cannot unpack its /opt/Mullvad VPN payload
 mkdir -p /var/opt
-rpm -i --noscripts /tmp/mullvad/MullvadVPN*.rpm
+rpm -i --noscripts --replacepkgs /tmp/mullvad/MullvadVPN*.rpm
 rm -rf /tmp/mullvad
 
 # clean-stage.sh wipes /opt at the end of the build for downstream image compatibility,
