@@ -26,6 +26,7 @@ dnf5 -y install \
     blossomui \
     blossom-sound-theme \
     blossom-udev-rules \
+    blossom-plymouth-theme \
     blossom-kcm-software-update \
     quick-appearance-kcm \
     dmemcg-booster \
@@ -39,6 +40,10 @@ dnf5 -y install \
     kwin-pen-cursor \
     micro \
     python3-pip
+
+# Use our sweeping-bar theme instead of the stock spinner; 19-initramfs.sh
+# rebuilds the initramfs later in the build and will pick this up
+plymouth-set-default-theme blossom
 
 # Replace stock kinfocenter with our BlossomOS-patched build
 mkdir -p /tmp/blossom-kinfocenter
