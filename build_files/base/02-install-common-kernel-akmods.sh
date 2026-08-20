@@ -80,7 +80,7 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/rpmfusion-free*.repo
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod v4l2loopback || true
 
 # OpenRazer from hardware:razer repo (not a COPR)
-dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
+dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 
