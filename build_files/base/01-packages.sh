@@ -269,7 +269,7 @@ if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
 fi
 
 # we can't remove plasma-lookandfeel-fedora package because it is a dependency of plasma-desktop
-rpm --erase --nodeps plasma-lookandfeel-fedora
+rpm --erase --nodeps plasma-lookandfeel-fedora || echo "Warning: Failed to remove plasma-lookandfeel-fedora"
 # rpm erase doesn't remove actual files
 rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/
 
