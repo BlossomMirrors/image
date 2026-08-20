@@ -20,7 +20,7 @@ blossom_repo_setup
 
 # Remove Existing Kernel
 for pkg in kernel kernel{-core,-modules,-modules-core,-modules-extra,-tools-libs,-tools}; do
-    rpm --erase "${pkg}" --nodeps
+    rpm --erase "${pkg}" --nodeps || echo "Warning: Failed to remove $pkg"
 done
 
 # cleanup leftovers that are not covered by kernel-* packages for some reason
