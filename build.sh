@@ -126,12 +126,25 @@ build_and_push() {
 # previous run (or nothing, on a fresh checkout - plasma-rpms/ isn't committed).
 # Skipped if a matching snapshot is already in place, and skipped entirely if
 # plasma_version is empty/unset (track Fedora's live Plasma packages).
-PLASMA_VERSION="$(yq -r '.plasma_version // ""' "${SCRIPT_DIR}/image-versions.yml")"
-if [[ -n "${PLASMA_VERSION}" && "${PLASMA_VERSION}" != "null" ]]; then
-    CURRENT_PINNED="$(awk -F= '/^resolved-plasma-version=/{print $2}' "${SCRIPT_DIR}/plasma-rpms/MANIFEST.txt" 2>/dev/null || true)"
-    if [[ "${CURRENT_PINNED}" != "${PLASMA_VERSION}" ]]; then
-        echo "==> Freezing Plasma to ${PLASMA_VERSION} (image-versions.yml)"
-        just fetch-plasma-rpms "${PLASMA_VERSION}"
+#
+# Deliberately skipped when running as root: build.sh runs under `sudo` in CI
+# (see .gitlab-ci.yml, where this same sync runs as a non-sudo before_script
+# step instead), and fetch-plasma-rpms's podman calls don't need root. Doing
+# it here too under sudo would leave plasma-rpms/*.rpm genuinely root-owned,
+# which the *next* pipeline's git checkout (running as the unprivileged
+# runner user) can't clean up - and since that checkout happens before any
+# script of ours runs, nothing we write here could ever fix it after the
+# fact. Learned this the hard way: see commit 828fbd7.
+if [[ "${EUID}" -eq 0 ]]; then
+    echo "==> Running as root (sudo) - skipping plasma-rpms sync here; it must be synced by a non-root step beforehand (CI's before_script, or run 'just fetch-plasma-rpms' yourself first)."
+else
+    PLASMA_VERSION="$(yq -r '.plasma_version // ""' "${SCRIPT_DIR}/image-versions.yml")"
+    if [[ -n "${PLASMA_VERSION}" && "${PLASMA_VERSION}" != "null" ]]; then
+        CURRENT_PINNED="$(awk -F= '/^resolved-plasma-version=/{print $2}' "${SCRIPT_DIR}/plasma-rpms/MANIFEST.txt" 2>/dev/null || true)"
+        if [[ "${CURRENT_PINNED}" != "${PLASMA_VERSION}" ]]; then
+            echo "==> Freezing Plasma to ${PLASMA_VERSION} (image-versions.yml)"
+            just fetch-plasma-rpms "${PLASMA_VERSION}"
+        fi
     fi
 fi
 

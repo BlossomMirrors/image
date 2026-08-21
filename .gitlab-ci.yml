@@ -13,13 +13,23 @@ variables:
   before_script:
     - cp "$COSIGN_PRIVATE_KEY" cosign.key
     - echo "$CI_REGISTRY_PASSWORD" | podman login registry.blossomos.org -u "$CI_REGISTRY_USER" --password-stdin
+    # Runs here, NOT inside build.sh, and deliberately without sudo: build.sh
+    # runs entirely as root (see the `sudo ./build.sh` below), and root-owned
+    # files in plasma-rpms/ can't be cleaned up by the *next* pipeline's git
+    # checkout, which runs as the unprivileged runner user - and that checkout
+    # happens before before_script/after_script even run, so nothing in this
+    # job's own lifecycle could fix it after the fact. Keeping this step
+    # unprivileged is what keeps plasma-rpms/ runner-owned from the start.
+    - |
+      PLASMA_VERSION="$(yq -r '.plasma_version // ""' image-versions.yml)"
+      if [[ -n "${PLASMA_VERSION}" && "${PLASMA_VERSION}" != "null" ]]; then
+        CURRENT_PINNED="$(awk -F= '/^resolved-plasma-version=/{print $2}' plasma-rpms/MANIFEST.txt 2>/dev/null || true)"
+        if [[ "${CURRENT_PINNED}" != "${PLASMA_VERSION}" ]]; then
+          echo "==> Freezing Plasma to ${PLASMA_VERSION} (image-versions.yml)"
+          just fetch-plasma-rpms "${PLASMA_VERSION}"
+        fi
+      fi
   after_script:
-    # sudo ./build.sh runs fetch-plasma-rpms as root, leaving plasma-rpms/
-    # root-owned on disk. Chown it back to the runner's own user (rather than
-    # deleting it) so the next job's unprivileged git checkout can clean the
-    # workspace, while keeping the cache so fetch-plasma-rpms can skip
-    # re-downloading ~600MB when the pin hasn't changed.
-    - sudo chown -R "$(id -u):$(id -g)" plasma-rpms 2>/dev/null || true
     - sudo podman system prune -af
 
 # latest (main branch + schedule + manual)
