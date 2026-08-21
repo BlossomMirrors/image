@@ -32,7 +32,7 @@ install -c -m 0755 /tmp/starship /usr/bin
 # Nerdfont symbols
 # to fix motd and prompt atleast temporarily
 curl "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.zip" --retry 3 -Lo /tmp/nerdfontsymbols.zip
-unzip /tmp/nerdfontsymbols.zip -d /tmp
+unzip -o /tmp/nerdfontsymbols.zip -d /tmp
 mkdir -p /usr/share/fonts/nerd-fonts/NerdFontsSymbolsOnly/
 mv /tmp/SymbolsNerdFont*.ttf /usr/share/fonts/nerd-fonts/NerdFontsSymbolsOnly/
 
