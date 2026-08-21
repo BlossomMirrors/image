@@ -552,8 +552,19 @@ resolve-digest-at $timestamp $fedora_tag=latest_version:
 # Snapshot a Plasma/KDE Frameworks/Qt6 RPM set into a local, gitignored
 # folder, so a later build can be pinned against a known-good release
 # instead of whatever Fedora's semi-rolling repos serve that day.
-# Scope: the "kde-desktop" group's direct members plus whichever qt6-*/kf6-*
-# packages the group's own dependency graph actually resolves to - computed
+# Scope: the "kde-desktop" group's direct members, RESTRICTED to names
+# matching plasma-*/kde-*/kf6-*/qt6-*/k[a-z]* - not every group member.
+# The "kde-desktop" comps group's Default list also includes plain Fedora
+# infra (glibc-all-langpacks, samba-usershares, systemd-oomd-defaults,
+# toolbox, udisks2, cups-pk-helper, ...) that has nothing to do with Plasma.
+# Freezing even one of those to an exact historical NEVRA is dangerous: dnf5
+# will pull in a matching-version glibc/systemd/samba from the live repos to
+# satisfy it, cascading into a ~400-package downgrade of the whole OS - this
+# happened for real (glibc-all-langpacks pinned an old glibc, which dragged
+# systemd and all of samba down with it) and produced an unbootable image.
+# The naming filter is what keeps this to the actual desktop shell.
+# Also included: whichever qt6-*/kf6-* packages that (filtered) group's own
+# dependency graph actually resolves to - computed
 # via a --resolve --alldeps --url pass (free: it only prints URLs, nothing is
 # downloaded) so unrelated qt6-*/kf6-* packages that happen to share the
 # prefix but nothing requires don't get swept in and versionlocked. That
@@ -595,7 +606,7 @@ fetch-plasma-rpms $plasma_version $dir="plasma-rpms" $fedora_tag=latest_version:
     fi
 
     dnf5 -y group info kde-desktop > /tmp/groupinfo.txt
-    mapfile -t GROUP_PKGS < <(awk -F': ' '/^(Mandatory|Default) packages/{flag=1} /^Optional packages/{flag=0} flag{print $2}' /tmp/groupinfo.txt | sed 's/^ *//;s/ *$//' | grep -v '^$' | sort -u)
+    mapfile -t GROUP_PKGS < <(awk -F': ' '/^(Mandatory|Default) packages/{flag=1} /^Optional packages/{flag=0} flag{print $2}' /tmp/groupinfo.txt | sed 's/^ *//;s/ *$//' | grep -v '^$' | grep -E '^(plasma-|kde-|kf6-|qt6-|k[a-z])' | sort -u)
 
     mapfile -t QT_KF_PKGS < <(dnf5 -y download --resolve --alldeps --arch=x86_64 --arch=noarch --url "${GROUP_PKGS[@]}" 2>/dev/null \
         | sed -E 's#.*/([^/]+)\.rpm$#\1#' \
