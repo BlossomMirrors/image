@@ -273,6 +273,29 @@ EXCLUDED_PACKAGES=(
     fcitx
     isoimagewriter
     kamoso
+    fcitx5
+    fcitx5-qt5
+    fcitx5-chewing
+    fcitx5-configtool
+    fcitx5-gtk
+    fcitx5-hangul
+    fcitx5-libthai
+    fcitx5-lua
+    fcitx5-rime
+    fcitx5-unikey
+    fcitx5-zhuyin
+    fcitx-qt5
+    fcitx5-anthy
+    fcitx5-kkc
+    fcitx5-mozc
+    fcitx5-sayura
+    fcitx5-skk
+    fcitx5-chinese-addons
+    fcitx5-table-extra
+    fcitx5-table-other
+    fcitx5-gtk2
+    fcitx5-gtk3
+    fcitx5-gtk4
 )
 
 # Version-specific package exclusions
