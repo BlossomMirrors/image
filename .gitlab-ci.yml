@@ -14,6 +14,12 @@ variables:
     - cp "$COSIGN_PRIVATE_KEY" cosign.key
     - echo "$CI_REGISTRY_PASSWORD" | podman login registry.blossomos.org -u "$CI_REGISTRY_USER" --password-stdin
   after_script:
+    # sudo ./build.sh runs fetch-plasma-rpms as root, leaving plasma-rpms/
+    # root-owned on disk. Chown it back to the runner's own user (rather than
+    # deleting it) so the next job's unprivileged git checkout can clean the
+    # workspace, while keeping the cache so fetch-plasma-rpms can skip
+    # re-downloading ~600MB when the pin hasn't changed.
+    - sudo chown -R "$(id -u):$(id -g)" plasma-rpms 2>/dev/null || true
     - sudo podman system prune -af
 
 # latest (main branch + schedule + manual)
