@@ -27,6 +27,10 @@ COPY --from=brew /system_files /system_files/shared
 
 COPY /system_files /system_files
 
+# /* frozen Plasma/KDE/Qt6 snapshot from `just fetch-plasma-rpms`, if any - */
+# /* see build_files/base/01-packages.sh for how this is consumed         */
+COPY /plasma-rpms /plasma-rpms
+
 # /* blossomos image section */
 FROM ${BASE_IMAGE}:${FEDORA_MAJOR_VERSION} AS base
 

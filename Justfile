@@ -511,6 +511,133 @@ verify-container key="" container="":
         exit 1
     fi
 
+# Resolve the base image digest that was active at a given Unix timestamp,
+# using Quay.io's per-tag history (start_ts/end_ts window per revision).
+# Note: Quay only retains tag history for its time-machine window (commonly
+# a few months), so timestamps older than that will not resolve.
+[group('Utility')]
+resolve-digest-at $timestamp $fedora_tag=latest_version:
+    #!/usr/bin/bash
+    set -eou pipefail
+
+    namespace_repo="${base_image_org#quay.io/}/${base_image_name}"
+    page=1
+    digest=""
+
+    while :; do
+        response=$(curl --retry 3 -sf "https://quay.io/api/v1/repository/${namespace_repo}/tag/?specificTag=${fedora_tag}&onlyActiveTags=false&limit=100&page=${page}")
+
+        digest=$(jq -r --argjson ts "${timestamp}" --arg tag "${fedora_tag}" '
+            [.tags[] | select(.name == $tag and .start_ts <= $ts and ((.end_ts // ($ts + 1)) > $ts))][0].manifest_digest // empty
+        ' <<< "${response}")
+
+        if [[ -n "${digest}" ]]; then
+            break
+        fi
+
+        has_additional=$(jq -r '.has_additional' <<< "${response}")
+        if [[ "${has_additional}" != "true" ]]; then
+            break
+        fi
+        (( page++ ))
+    done
+
+    if [[ -z "${digest}" ]]; then
+        echo "No '${fedora_tag}' revision of ${namespace_repo} was active at ${timestamp} ($(date -u -d "@${timestamp}" +%Y-%m-%dT%H:%M:%SZ))" >&2
+        exit 1
+    fi
+
+    echo "${digest}"
+
+# Snapshot a Plasma/KDE Frameworks/Qt6 RPM set into a local, gitignored
+# folder, so a later build can be pinned against a known-good release
+# instead of whatever Fedora's semi-rolling repos serve that day.
+# Scope: the "kde-desktop" group's direct members plus the qt6-*/kf6-*
+# families (the two already versionlocked in 01-packages.sh) - not a full
+# --alldeps closure, which would drag in ~1400 unrelated base-OS packages.
+# Works for the live version AND for older ones: Fedora's "updates-archive"
+# repo (unlike Quay's short-lived tag history) keeps every historical build
+# queryable, so this anchors on the timestamp of $plasma_version's own build
+# and, for every package in scope, picks the newest build at or before that
+# time - which naturally reduces to "today's live packages" when
+# $plasma_version happens to be the current one. Fails loudly if no build of
+# plasma-desktop matches $plasma_version at all (e.g. a typo, or a version
+# that never shipped for this Fedora release).
+[group('Utility')]
+fetch-plasma-rpms $plasma_version $dir="plasma-rpms" $fedora_tag=latest_version:
+    #!/usr/bin/bash
+    set -eou pipefail
+
+    SCRIPT="$(mktemp)"
+    STAGING="$(mktemp -d)"
+    trap 'rm -f "${SCRIPT}"; rm -rf "${STAGING}"' EXIT
+
+    cat > "${SCRIPT}" <<'INNER'
+    set -eou pipefail
+
+    PLASMA_VERSION="$1"
+
+    ANCHOR_TS=$(dnf5 -y repoquery --qf=$'%{version}\t%{buildtime}\n' plasma-desktop 2>/dev/null \
+        | awk -F'\t' -v want="${PLASMA_VERSION}" '$1==want{print $2}' | sort -n | tail -1)
+
+    if [[ -z "${ANCHOR_TS}" ]]; then
+        echo "No build of plasma-desktop matches version ${PLASMA_VERSION} in any enabled repo (fedora/updates/updates-archive)." >&2
+        exit 1
+    fi
+
+    dnf5 -y group info kde-desktop > /tmp/groupinfo.txt
+    mapfile -t GROUP_PKGS < <(awk -F': ' '/^(Mandatory|Default) packages/{flag=1} /^Optional packages/{flag=0} flag{print $2}' /tmp/groupinfo.txt | sed 's/^ *//;s/ *$//' | grep -v '^$' | sort -u)
+
+    mapfile -t QT_KF_PKGS < <(dnf5 -y repoquery --available --arch=x86_64,noarch --qf=$'%{name}\n' "qt6-*" "kf6-*" 2>/dev/null | grep -vE -- '-devel$|-doc$|-html$|-examples$|-static$' | sort -u)
+
+    ALL_PKGS=("${GROUP_PKGS[@]}" "${QT_KF_PKGS[@]}")
+
+    dnf5 -y repoquery --arch=x86_64 --arch=noarch --qf=$'%{name}\t%{arch}\t%{buildtime}\t%{name}-%{version}-%{release}.%{arch}\n' "${ALL_PKGS[@]}" 2>/dev/null \
+        | awk -F'\t' -v anchor="${ANCHOR_TS}" '
+            $3 <= anchor {
+                key = $1 SUBSEP $2
+                if (!(key in best_ts) || $3 > best_ts[key]) {
+                    best_ts[key] = $3
+                    best[key] = $4
+                }
+            }
+            END { for (k in best) print best[k] }
+        ' | sort -u > /tmp/nevras.txt
+
+    mapfile -t NEVRAS < /tmp/nevras.txt
+    dnf5 -y download --skip-unavailable --destdir=/out "${NEVRAS[@]}"
+
+    rpm -qp --qf '%{NAME} %{VERSION}-%{RELEASE}\n' /out/*.rpm | sort > /out/MANIFEST.txt
+
+    RESOLVED_VERSION=$(awk '$1 == "plasma-desktop" {print $2}' /out/MANIFEST.txt | sed 's/-[^-]*$//')
+    echo "resolved-plasma-version=${RESOLVED_VERSION}" >> /out/MANIFEST.txt
+    INNER
+
+    ${PODMAN} run --rm -v "${STAGING}":/out:Z -v "${SCRIPT}":/fetch.sh:ro,Z "${base_image_org}/${base_image_name}:${fedora_tag}" bash /fetch.sh "${plasma_version}"
+
+    RESOLVED_VERSION=$(awk -F= '/^resolved-plasma-version=/{print $2}' "${STAGING}/MANIFEST.txt")
+
+    echo "Requested Plasma version: ${plasma_version}"
+    echo "Resolved Plasma version: ${RESOLVED_VERSION:-<none>}"
+
+    if [[ -z "${RESOLVED_VERSION}" ]]; then
+        echo "NOTICE: Could not determine a resolved plasma-desktop version from the download." >&2
+        exit 1
+    fi
+
+    if [[ "${RESOLVED_VERSION}" != "${plasma_version}" ]]; then
+        echo "NOTICE: Resolved plasma-desktop version (${RESOLVED_VERSION}) does not match the requested version (${plasma_version})." >&2
+        exit 1
+    fi
+
+    # Only replace the previous snapshot once the new one is fully verified,
+    # so a failed/mismatched fetch never leaves plasma-rpms/ empty or wiped.
+    mkdir -p "${dir}"
+    rm -f "${dir}"/*.rpm "${dir}/MANIFEST.txt"
+    mv "${STAGING}"/*.rpm "${STAGING}/MANIFEST.txt" "${dir}/"
+
+    echo "Downloaded $(find "${dir}" -name '*.rpm' | wc -l) RPMs into ${dir}/"
+
 # Secureboot Check
 [group('Utility')]
 secureboot $image="blossomos" $tag="latest" $flavor="main":

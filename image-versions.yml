@@ -1,3 +1,9 @@
+# Plasma/KDE Frameworks/Qt6 version to freeze the image against, via
+# `just fetch-plasma-rpms` (see build.sh, which refreshes plasma-rpms/ to
+# match this before every build). Leave empty/omit to track Fedora's live
+# Plasma packages instead of pinning to a specific release.
+plasma_version: "6.7.3"
+
 images:
   - name: kinoite
     image: quay.io/fedora-ostree-desktops/kinoite

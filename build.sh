@@ -121,5 +121,19 @@ build_and_push() {
     # fi
 }
 
+# Refresh plasma-rpms/ to match image-versions.yml's plasma_version, so the
+# build always uses the declared pin rather than whatever's left over from a
+# previous run (or nothing, on a fresh checkout - plasma-rpms/ isn't committed).
+# Skipped if a matching snapshot is already in place, and skipped entirely if
+# plasma_version is empty/unset (track Fedora's live Plasma packages).
+PLASMA_VERSION="$(yq -r '.plasma_version // ""' "${SCRIPT_DIR}/image-versions.yml")"
+if [[ -n "${PLASMA_VERSION}" && "${PLASMA_VERSION}" != "null" ]]; then
+    CURRENT_PINNED="$(awk -F= '/^resolved-plasma-version=/{print $2}' "${SCRIPT_DIR}/plasma-rpms/MANIFEST.txt" 2>/dev/null || true)"
+    if [[ "${CURRENT_PINNED}" != "${PLASMA_VERSION}" ]]; then
+        echo "==> Freezing Plasma to ${PLASMA_VERSION} (image-versions.yml)"
+        just fetch-plasma-rpms "${PLASMA_VERSION}"
+    fi
+fi
+
 build_and_push "blossomos"    ""
 build_and_push "blossomos-dx" "-dx"
