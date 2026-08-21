@@ -23,14 +23,23 @@ curl --retry 3 -Lo /etc/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub
 # can silently ship a newer Plasma release that breaks our patches.
 # This must run before any other versionlock below, otherwise those locks
 # pin the live (freshly pulled) versions and block the downgrade here.
-# plasma-setup is excluded: BlossomOS installs its own patched build from
-# the ublue-os/staging COPR further down, and locking it here to a stock
-# Fedora build would block that install.
+#
+# BLOSSOM_OVERRIDE_PKGS: packages BlossomOS replaces with its own patched
+# build further down the build (COPR or repo.blossomos.org), which would
+# otherwise get locked here to a stock Fedora build and block that install.
+# Check build_files/base/04-blossomos.sh, 05-blossomos-dx.sh, and the COPR
+# installs below in this file when adding a new BlossomOS-patched package
+# that also happens to be a kde-desktop group member.
+BLOSSOM_OVERRIDE_PKGS=(
+    "plasma-setup" # ublue-os/staging COPR, see below in this file
+    "kinfocenter"  # repo.blossomos.org, see build_files/base/04-blossomos.sh
+)
 if compgen -G "/ctx/plasma-rpms/*.rpm" > /dev/null; then
     RESOLVED_VERSION=$(awk -F= '/^resolved-plasma-version=/{print $2}' /ctx/plasma-rpms/MANIFEST.txt)
     echo "Pinning Plasma/KDE/Qt6 to frozen snapshot (Plasma ${RESOLVED_VERSION:-unknown})..."
 
-    mapfile -t FROZEN_RPMS < <(find /ctx/plasma-rpms -maxdepth 1 -name '*.rpm' ! -name 'plasma-setup-*')
+    BLOSSOM_OVERRIDE_PATTERN=$(IFS='|'; echo "${BLOSSOM_OVERRIDE_PKGS[*]}")
+    mapfile -t FROZEN_RPMS < <(find /ctx/plasma-rpms -maxdepth 1 -name '*.rpm' | grep -vE "/(${BLOSSOM_OVERRIDE_PATTERN})-[^/]+\.rpm\$")
     dnf5 -y install "${FROZEN_RPMS[@]}"
 
     mapfile -t FROZEN_PKGS < <(rpm -qp --qf '%{NAME}\n' "${FROZEN_RPMS[@]}" | sort -u)
