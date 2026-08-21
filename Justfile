@@ -552,9 +552,18 @@ resolve-digest-at $timestamp $fedora_tag=latest_version:
 # Snapshot a Plasma/KDE Frameworks/Qt6 RPM set into a local, gitignored
 # folder, so a later build can be pinned against a known-good release
 # instead of whatever Fedora's semi-rolling repos serve that day.
-# Scope: the "kde-desktop" group's direct members plus the qt6-*/kf6-*
-# families (the two already versionlocked in 01-packages.sh) - not a full
-# --alldeps closure, which would drag in ~1400 unrelated base-OS packages.
+# Scope: the "kde-desktop" group's direct members plus whichever qt6-*/kf6-*
+# packages the group's own dependency graph actually resolves to - computed
+# via a --resolve --alldeps --url pass (free: it only prints URLs, nothing is
+# downloaded) so unrelated qt6-*/kf6-* packages that happen to share the
+# prefix but nothing requires don't get swept in and versionlocked. That
+# matters: an earlier version of this recipe grabbed every qt6-*/kf6-*
+# package by wildcard, which pinned kf6-kmime even though nothing needs it -
+# and later collided with the unrelated live "kmime" package (both ship
+# /usr/share/qlogging-categories6/kmime.categories), breaking the build.
+# --resolve --alldeps also includes ~1400 unrelated base-OS packages
+# (bash, binutils, abrt, ...); those are filtered back out, only the
+# qt6-*/kf6-* subset is kept.
 # Works for the live version AND for older ones: Fedora's "updates-archive"
 # repo (unlike Quay's short-lived tag history) keeps every historical build
 # queryable, so this anchors on the timestamp of $plasma_version's own build
@@ -588,7 +597,12 @@ fetch-plasma-rpms $plasma_version $dir="plasma-rpms" $fedora_tag=latest_version:
     dnf5 -y group info kde-desktop > /tmp/groupinfo.txt
     mapfile -t GROUP_PKGS < <(awk -F': ' '/^(Mandatory|Default) packages/{flag=1} /^Optional packages/{flag=0} flag{print $2}' /tmp/groupinfo.txt | sed 's/^ *//;s/ *$//' | grep -v '^$' | sort -u)
 
-    mapfile -t QT_KF_PKGS < <(dnf5 -y repoquery --available --arch=x86_64,noarch --qf=$'%{name}\n' "qt6-*" "kf6-*" 2>/dev/null | grep -vE -- '-devel$|-doc$|-html$|-examples$|-static$' | sort -u)
+    mapfile -t QT_KF_PKGS < <(dnf5 -y download --resolve --alldeps --arch=x86_64 --arch=noarch --url "${GROUP_PKGS[@]}" 2>/dev/null \
+        | sed -E 's#.*/([^/]+)\.rpm$#\1#' \
+        | sed -E 's/-[^-]+-[^-]+\.[^.]+$//' \
+        | grep -E '^(qt6|kf6)-' \
+        | grep -vE -- '-devel$|-doc$|-html$|-examples$|-static$' \
+        | sort -u)
 
     ALL_PKGS=("${GROUP_PKGS[@]}" "${QT_KF_PKGS[@]}")
 
