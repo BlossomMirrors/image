@@ -38,6 +38,7 @@ ARG IMAGE_VENDOR="blossomos"
 ARG KERNEL=""
 ARG SHA_HEAD_SHORT="dedbeef"
 ARG UBLUE_IMAGE_TAG="latest"
+ARG PUBLISHED_TAG=""
 ARG VERSION=""
 ARG IMAGE_FLAVOR=""
 ARG IMAGE_REF=""
@@ -47,7 +48,7 @@ ARG BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm/"
 ENV PATH="/tmp/scripts/helpers:${PATH}"
 
 # /* blossomos:latest no zfs or nvidia */
-#if !defined(NVIDIA) && !defined(ZFS)
+#if !defined(NVIDIA) && !defined(NVIDIA_LEGACY) && !defined(ZFS)
 RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=tmpfs,dst=/var \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
@@ -63,7 +64,7 @@ RUN --mount=type=tmpfs,dst=/boot \
 #endif
 
 # /* blossomos:stable with zfs no nvidia */
-#if !defined(NVIDIA) && defined(ZFS)
+#if !defined(NVIDIA) && !defined(NVIDIA_LEGACY) && defined(ZFS)
 RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=tmpfs,dst=/var \
     --mount=type=bind,from=ctx,source=/,target=/ctx \

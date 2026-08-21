@@ -84,7 +84,7 @@ build_and_push() {
     OLD_DIGEST="$(skopeo inspect --format '{{.Digest}}' "docker://${REMOTE_REF}" 2>/dev/null || true)"
 
     echo "==> Building ${LOCAL_REF} -> ${REMOTE_REF}"
-    just build "${image}" "${BUILD_TAG}" "${FLAVOR}"
+    PUBLISHED_TAG="${REMOTE_TAG}" just build "${image}" "${BUILD_TAG}" "${FLAVOR}"
 
     # Rechunk against the currently published REMOTE_REF so unchanged layers
     # keep the same digest and neither clients nor the registry accumulate a

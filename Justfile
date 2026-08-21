@@ -191,6 +191,9 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     if [[ -n "${IMAGE_REF:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "IMAGE_REF=${IMAGE_REF}")
     fi
+    if [[ -n "${PUBLISHED_TAG:-}" ]]; then
+        BUILD_ARGS+=("--build-arg" "PUBLISHED_TAG=${PUBLISHED_TAG}")
+    fi
     if [[ -n "${BLOSSOM_REPO_URL:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "BLOSSOM_REPO_URL=${BLOSSOM_REPO_URL}")
     fi
