@@ -6,7 +6,7 @@ BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kin
 
 ## Images
 
-Published to `registry.blossomos.org/blossom/image`.
+`latest` tags are published to `registry.blossomos.org/blossom/image-dev`. `main` and `prerelease` tags are published to `registry.blossomos.org/blossom/image`.
 
 | Tag | Description |
 |-----|-------------|
