@@ -50,6 +50,14 @@ REGISTRY_IMAGE="${REGISTRY_IMAGE:-image}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# CI (see .gitlab-ci.yml) points this at podman-ci-wrapper.sh so this job's
+# podman calls land in storage isolated from other concurrent build-* jobs
+# on the runner. `just build`/`just rechunk` already honor PODMAN via the
+# Justfile, so the tag/push calls below must go through it too, or they'd
+# tag/push against the default (wrong) podman storage instead of the one
+# the image was actually built in.
+PODMAN="${PODMAN:-podman}"
+
 # Map variant to Justfile flavor and remote tag suffix
 if [[ "${VARIANT}" == "nvidia" ]]; then
     FLAVOR="nvidia-open"
@@ -94,11 +102,11 @@ build_and_push() {
     just load-rechunk "${image}" "${BUILD_TAG}" "${FLAVOR}"
 
     echo "==> Tagging ${LOCAL_REF} -> ${REMOTE_REF}"
-    podman tag "${LOCAL_REF}" "${REMOTE_REF}"
+    "${PODMAN}" tag "${LOCAL_REF}" "${REMOTE_REF}"
 
     echo "==> Pushing ${REMOTE_REF}"
     DIGEST_FILE="$(mktemp)"
-    podman push --digestfile "${DIGEST_FILE}" "${REMOTE_REF}"
+    "${PODMAN}" push --digestfile "${DIGEST_FILE}" "${REMOTE_REF}"
     DIGEST="$(cat "${DIGEST_FILE}")"
     rm -f "${DIGEST_FILE}"
 

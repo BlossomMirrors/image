@@ -30,6 +30,11 @@ variables:
         fi
       fi
   after_script:
+    # Cleans up this job's isolated podman storage (see podman-ci-wrapper.sh
+    # and the CI_JOB_ID/PODMAN forwarded into each `sudo ... ./build.sh`
+    # call below) - runs even on job failure so it can't accumulate on the
+    # runner across pipelines.
+    - sudo rm -rf "/var/lib/containers-ci/${CI_JOB_ID}" "/run/containers-ci/${CI_JOB_ID}"
     - sudo podman system prune -af
 
 # latest (main branch + schedule + manual)
@@ -41,7 +46,7 @@ build-generic-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest generic
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest generic
 
 build-nvidia-latest:
   extends: .build_base
@@ -50,7 +55,7 @@ build-nvidia-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia
 
 build-nvidia-legacy-latest:
   extends: .build_base
@@ -59,7 +64,7 @@ build-nvidia-legacy-latest:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia-legacy
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh latest nvidia-legacy
 
 # prerelease
 
@@ -68,21 +73,21 @@ build-generic-prerelease:
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease generic
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease generic
 
 build-nvidia-prerelease:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia
 
 build-nvidia-legacy-prerelease:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
-    - sudo BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia-legacy
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" ./build.sh prerelease nvidia-legacy
 
 # release
 
@@ -91,18 +96,18 @@ build-generic-release:
   rules:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
   script:
-    - sudo ./build.sh main generic
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" ./build.sh main generic
 
 build-nvidia-release:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
   script:
-    - sudo ./build.sh main nvidia
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" ./build.sh main nvidia
 
 build-nvidia-legacy-release:
   extends: .build_base
   rules:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
   script:
-    - sudo ./build.sh main nvidia-legacy
+    - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" ./build.sh main nvidia-legacy
