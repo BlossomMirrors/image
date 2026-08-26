@@ -70,6 +70,7 @@ powerstat
 powertop
 solaar-udev
 steam-devices
+fw-fanctrl
 
 # Input Methods
 fcitx5-chewing
