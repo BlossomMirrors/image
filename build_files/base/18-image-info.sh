@@ -41,7 +41,7 @@ EOF
 # Boot Splash Message
 BOOTMSG_FILE="/usr/lib/blossomos/bootmsg-text"
 read -r BOOTMSG_TEXT <"$BOOTMSG_FILE"
-echo "${BOOTMSG_TEXT} (${PUBLISHED_TAG:-$UBLUE_IMAGE_TAG})" >"$BOOTMSG_FILE"
+echo "${BOOTMSG_TEXT} (${PUBLISHED_TAG:-$UBLUE_IMAGE_TAG}; ${VERSION})" >"$BOOTMSG_FILE"
 
 # OS Release File
 sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
