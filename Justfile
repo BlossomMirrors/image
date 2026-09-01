@@ -245,6 +245,18 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
         echo "No GitHub token found - build may hit rate limit"
     fi
 
+    # Add secure boot signing key as build secret, if present (see
+    # .gitlab-ci.yml, which writes it from the SECUREBOOT_PRIVATE_KEY CI
+    # variable, same as cosign.key). Signs the custom kernel's vmlinuz in
+    # 02-install-common-kernel-akmods.sh so it verifies against the MOK
+    # enrolled via /usr/share/blossomos/secureboot.
+    if [[ -f "secureboot.key" ]]; then
+        echo "Adding secure boot signing key as build secret"
+        PODMAN_BUILD_ARGS+=(--secret "id=SECUREBOOT_KEY,src=secureboot.key")
+    else
+        echo "No secure boot signing key found (secureboot.key) - kernel vmlinuz will not be signed for secure boot"
+    fi
+
     ${PODMAN} build "${PODMAN_BUILD_ARGS[@]}" .
     echo "::endgroup::"
 
@@ -681,11 +693,10 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
     ${PODMAN} cp "$TMP":/usr/lib/modules/"${kernel_release}"/vmlinuz /tmp/vmlinuz
     ${PODMAN} rm "$TMP"
 
-    # Get the Public Certificates
-    curl --retry 3 -Lo /tmp/kernel-sign.der https://github.com/ublue-os/akmods/raw/main/certs/public_key.der
-    curl --retry 3 -Lo /tmp/akmods.der https://github.com/ublue-os/akmods/raw/main/certs/public_key_2.der
-    openssl x509 -in /tmp/kernel-sign.der -out /tmp/kernel-sign.crt
-    openssl x509 -in /tmp/akmods.der -out /tmp/akmods.crt
+    # BlossomOS' own secure boot signing cert (committed alongside this
+    # Justfile; see build_files/base/02-install-common-kernel-akmods.sh,
+    # which signs vmlinuz against the matching private key)
+    cp secureboot.crt /tmp/kernel-sign.crt
 
     # Make sure we have sbverify
     CMD="$(command -v sbverify)"
@@ -695,7 +706,6 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
             --entrypoint /bin/sh \
             --volume /tmp/vmlinuz:/tmp/vmlinuz:z \
             --volume /tmp/kernel-sign.crt:/tmp/kernel-sign.crt:z \
-            --volume /tmp/akmods.crt:/tmp/akmods.crt:z \
             --name ${temp_name} \
             alpine:edge
         ${PODMAN} exec ${temp_name} apk add sbsigntool
@@ -705,7 +715,7 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
     # Confirm that Signatures Are Good
     $CMD --list /tmp/vmlinuz
     returncode=0
-    if ! $CMD --cert /tmp/kernel-sign.crt /tmp/vmlinuz || ! $CMD --cert /tmp/akmods.crt /tmp/vmlinuz; then
+    if ! $CMD --cert /tmp/kernel-sign.crt /tmp/vmlinuz; then
         echo "Secureboot Signature Failed...."
         returncode=1
     fi

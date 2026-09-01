@@ -27,6 +27,11 @@ COPY --from=brew /system_files /system_files/shared
 
 COPY /system_files /system_files
 
+# /* public secure boot signing cert - baked in, unlike secureboot.key which */
+# /* is only ever mounted in as a --secret, never copied into a layer       */
+COPY /secureboot.crt /secureboot.crt
+COPY /secureboot.der /secureboot.der
+
 # /* frozen Plasma/KDE/Qt6 snapshot from `just fetch-plasma-rpms`, if any - */
 # /* see build_files/base/01-packages.sh for how this is consumed         */
 COPY /plasma-rpms /plasma-rpms
@@ -61,6 +66,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/common,dst=/tmp/rpms/common \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -78,6 +84,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=bind,from=akmods-zfs,src=/rpms/kmods/zfs,dst=/tmp/rpms/kmods/zfs \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -96,6 +103,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -115,6 +123,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms/kmods/zfs,dst=/tmp/rpms/kmods/zfs \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -134,6 +143,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -153,6 +163,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms/kmods/zfs,dst=/tmp/rpms/kmods/zfs \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \

@@ -49,6 +49,24 @@ rm -rf /tmp/blossom-kernel
 
 dnf5 versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
+# Secure boot signing. kernel-blossomos' rpmbuild PE-signs vmlinuz itself,
+# but (with no real signing HSM/token present) pesign silently falls back to
+# Fedora's local self-test cert, which no one's shim trusts. Re-sign with
+# BlossomOS' own key here so the result verifies against the MOK enrolled via
+# /usr/share/blossomos/secureboot (see system_files) and iso's installer.
+mkdir -p /usr/share/blossomos/secureboot
+cp /ctx/secureboot.der /usr/share/blossomos/secureboot/blossomos-secureboot.der
+if [[ -f /run/secrets/SECUREBOOT_KEY ]]; then
+    dnf5 -y install sbsigntools
+    KREL="${BLOSSOM_KERNEL_VERSION}.x86_64"
+    sbsign --key /run/secrets/SECUREBOOT_KEY --cert /ctx/secureboot.crt \
+        --output "/usr/lib/modules/${KREL}/vmlinuz.signed" "/usr/lib/modules/${KREL}/vmlinuz"
+    mv "/usr/lib/modules/${KREL}/vmlinuz.signed" "/usr/lib/modules/${KREL}/vmlinuz"
+    dnf5 -y remove sbsigntools
+else
+    echo "WARNING: no secure boot signing key (secureboot.key) - vmlinuz keeps rpmbuild's untrusted test signature, secure boot will fail"
+fi
+
 mkdir -p /etc/pki/akmods/certs
 curl "https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.der" --retry 3 -Lo /etc/pki/akmods/certs/akmods-ublue.der
 
