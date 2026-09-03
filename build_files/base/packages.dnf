@@ -22,7 +22,6 @@ alsa-utils
 borgbackup
 rclone
 restic
-timeshift
 
 # Bluetooth
 # (base Kinoite ships bluez — no duplicate needed)

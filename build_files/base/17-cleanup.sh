@@ -68,8 +68,12 @@ systemctl enable rpm-ostreed-automatic.timer
 
 # Hide Desktop Files. Hidden removes mime associations
 # kbd-layout-viewer5 ships from fcitx5-configtool; its actual config UI
-# (org.fcitx.fcitx5-config-qt.desktop) already ships with NoDisplay=true
-for file in htop nvtop kbd-layout-viewer5; do
+# (org.fcitx.fcitx5-config-qt.desktop) already ships with NoDisplay=true.
+# fcitx5-configtool.desktop and org.fcitx.Fcitx5.desktop ship from
+# fcitx5-data (a base fcitx5 dependency) with no NoDisplay of their own,
+# and would otherwise leak the GTK config tool and the bare IME daemon
+# into the launcher alongside the KCM entry.
+for file in htop nvtop kbd-layout-viewer5 fcitx5-configtool org.fcitx.Fcitx5; do
     if [[ -f "/usr/share/applications/${file}.desktop" ]]; then
         desktop-file-edit --set-key=Hidden --set-value=true /usr/share/applications/${file}.desktop
     fi

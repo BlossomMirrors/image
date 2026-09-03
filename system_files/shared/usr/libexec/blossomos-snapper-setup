@@ -18,7 +18,9 @@ if [[ "$(findmnt -no FSTYPE "$MOUNT_POINT" 2>/dev/null)" != "btrfs" ]]; then
     exit 0
 fi
 
-snapper -c "$CONFIG_NAME" create-config "$MOUNT_POINT"
+# --no-dbus talks to the filesystem directly instead of snapperd, which
+# isn't guaranteed to be up yet this early at boot (After=local-fs.target).
+snapper --no-dbus -c "$CONFIG_NAME" create-config "$MOUNT_POINT"
 
 # Let desktop users browse and restore their own snapshots through
 # kio-snapshot/snapperd without needing sudo.
