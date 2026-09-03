@@ -92,7 +92,15 @@ copr_install_isolated "ublue-os/akmods" akmod-xone xone-kmod-common || true
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod xone || true
 
 # v4l2loopback from RPM Fusion, same reasoning as xone above
-dnf -y install "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
+#
+# Fetched with curl (not `dnf install <url>`) so a corrupted/truncated
+# transfer is retried instead of landing straight in the persistent
+# /var/cache/libdnf5 cache mount, where a bad file would keep failing
+# every subsequent build until manually evicted.
+curl "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+    --retry 3 -Lo /tmp/rpmfusion-free-release.rpm
+dnf5 install -y /tmp/rpmfusion-free-release.rpm
+rm -f /tmp/rpmfusion-free-release.rpm
 dnf -y install akmod-v4l2loopback || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/rpmfusion-free*.repo
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod v4l2loopback || true
