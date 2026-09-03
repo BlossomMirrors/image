@@ -1,0 +1,25 @@
+#!/usr/bin/bash
+# Auto-create a snapper config for /var/home on installs where it is its own
+# btrfs subvolume (the default Fedora Kinoite layout). Root is versioned by
+# ostree already, so home is the only place snapper/kio-snapshot are useful.
+set -euo pipefail
+
+CONFIG_NAME=home
+MOUNT_POINT=/var/home
+CONFIG_FILE="/etc/snapper/configs/${CONFIG_NAME}"
+
+# create-config errors out if the config already exists, and this runs on
+# every boot, so treat an existing config as already done.
+if [[ -f "$CONFIG_FILE" ]]; then
+    exit 0
+fi
+
+if [[ "$(findmnt -no FSTYPE "$MOUNT_POINT" 2>/dev/null)" != "btrfs" ]]; then
+    exit 0
+fi
+
+snapper -c "$CONFIG_NAME" create-config "$MOUNT_POINT"
+
+# Let desktop users browse and restore their own snapshots through
+# kio-snapshot/snapperd without needing sudo.
+sed -i 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/' "$CONFIG_FILE"

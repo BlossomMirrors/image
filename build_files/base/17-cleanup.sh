@@ -24,6 +24,9 @@ systemctl disable systemd-oomd.socket
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-grub-migrate.service
+systemctl enable blossomos-snapper-setup.service
+systemctl enable snapper-timeline.timer
+systemctl enable snapper-cleanup.timer
 systemctl enable blossomos-bootmsg.service
 systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
@@ -64,7 +67,9 @@ systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 systemctl enable rpm-ostreed-automatic.timer
 
 # Hide Desktop Files. Hidden removes mime associations
-for file in htop nvtop; do
+# kbd-layout-viewer5 ships from fcitx5-configtool; its actual config UI
+# (org.fcitx.fcitx5-config-qt.desktop) already ships with NoDisplay=true
+for file in htop nvtop kbd-layout-viewer5; do
     if [[ -f "/usr/share/applications/${file}.desktop" ]]; then
         desktop-file-edit --set-key=Hidden --set-value=true /usr/share/applications/${file}.desktop
     fi
