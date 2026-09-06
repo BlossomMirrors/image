@@ -38,12 +38,12 @@ variables:
     - sudo rm -rf "/var/lib/containers-ci/${CI_JOB_ID}" "/run/containers-ci/${CI_JOB_ID}"
     - sudo podman system prune -af
 
-# latest (main branch + schedule + manual)
+# latest (dev branch + schedule + manual)
 
 build-generic-latest:
   extends: .build_base
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
     - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" REGISTRY_IMAGE="image-dev" ./build.sh latest generic
@@ -51,7 +51,7 @@ build-generic-latest:
 build-nvidia-latest:
   extends: .build_base
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
     - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" REGISTRY_IMAGE="image-dev" ./build.sh latest nvidia
@@ -59,7 +59,7 @@ build-nvidia-latest:
 build-nvidia-legacy-latest:
   extends: .build_base
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
   script:
     - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm-testing/" REGISTRY_IMAGE="image-dev" ./build.sh latest nvidia-legacy
