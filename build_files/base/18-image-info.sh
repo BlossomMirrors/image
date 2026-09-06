@@ -79,4 +79,10 @@ cat /usr/lib/os-release
 # Fix issues caused by ID no longer being fedora
 sed -i "s|^EFIDIR=.*|EFIDIR=\"fedora\"|" /usr/sbin/grub2-switch-to-blscfg
 
+# Resolved package manifest to gather information about installed packages outside of the image
+mkdir -p /usr/share/blossomos
+rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' \
+    | sort > /usr/share/blossomos/packages.lock
+echo "packages.lock: $(wc -l < /usr/share/blossomos/packages.lock) packages"
+
 echo "::endgroup::"
