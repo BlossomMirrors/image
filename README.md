@@ -2,7 +2,7 @@
 
 [![pipeline status](https://dev.blossomos.org/blossom/os/core/image/badges/main/pipeline.svg)](https://dev.blossomos.org/blossom/os/core/image/-/commits/main)
 
-BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kinoite](https://fedoraproject.org/kinoite/) (KDE Plasma), using [BlueBuild](https://blue-build.org/) for declarative image configuration.
+BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kinoite](https://fedoraproject.org/kinoite/) (KDE Plasma).
 
 ## Images
 
@@ -28,41 +28,40 @@ BlossomOS is a Fedora-based bootable container image built on top of [Fedora Kin
 ## Repository layout
 
 ```
-recipes/          # BlueBuild recipe files — one per image variant
-  recipe.yml
-  recipe-nvidia.yml
-  recipe-dx.yml
-  recipe-dx-nvidia.yml
-files/
-  scripts/        # Build-time scripts run inside the container
-  system/         # Runtime system files copied to / in the image
-  packages.dnf    # RPM package list
-  packages.flatpak  # Flatpak preinstall list
+Containerfile.in     # Templated Containerfile (preprocessed per variant via #if defined blocks)
+Justfile             # Build, rechunk, and utility recipes
+build.sh             # CI entrypoint: build, rechunk, push, and sign all variants for a tag
+build_files/
+  base/               # Build-time scripts run inside the container (packages, kernel/akmods, etc.)
+  dx/                 # Developer experience variant scripts
+  shared/             # Scripts shared across variants
+system_files/
+  shared/             # Runtime system files copied to / in the image
+image-versions.yml    # Pinned digests/versions (brew image, Plasma snapshot, etc.)
 ```
 
 ## Building locally
 
-Requires the [BlueBuild CLI](https://blue-build.org/learn/getting-started/) and Podman (v4+) or Buildah (v1.29+).
+Requires [Just](https://github.com/casey/just), Podman (v4+) or Docker, and `yq`.
 
 ```sh
-# Install the CLI
-curl -fsSL -o /usr/local/bin/bluebuild \
-  https://github.com/blue-build/cli/releases/latest/download/bluebuild-x86_64-unknown-linux-musl
-chmod +x /usr/local/bin/bluebuild
-
-# Build a variant
-bluebuild build recipes/recipe.yml
-bluebuild build recipes/recipe-dx.yml
-bluebuild build recipes/recipe-nvidia.yml
-bluebuild build recipes/recipe-dx-nvidia.yml
+# Build a variant: just build [image] [fedora-tag] [flavor]
+just build blossomos latest main
+just build blossomos-dx latest main
+just build blossomos latest nvidia-open
+just build blossomos latest nvidia-legacy
 ```
+
+`image` is `blossomos` or `blossomos-dx`, `fedora-tag` is `stable`, `latest`, or `beta`, and `flavor` is `main`, `nvidia-open`, or `nvidia-legacy`.
+
+To reproduce a full CI build (build, rechunk, tag, push, and cosign-sign every variant for a registry tag), use `./build.sh [main|latest|prerelease] [generic|nvidia|nvidia-legacy]`; this requires registry credentials and the cosign/secure boot signing keys.
 
 ## Verification
 
-Images are signed with cosign. Verify with the included public key:
+Images are signed with cosign. Verify with the included public key, for example:
 
 ```sh
-cosign verify --key cosign.pub registry.blossomos.org/blossom/image:latest
+cosign verify --key cosign.pub registry.blossomos.org/blossom/image:main
 ```
 
 ## License
