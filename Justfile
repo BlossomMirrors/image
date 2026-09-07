@@ -618,13 +618,36 @@ fetch-plasma-rpms $plasma_version $dir="plasma-rpms" $fedora_tag=latest_version:
     fi
 
     dnf5 -y group info kde-desktop > /tmp/groupinfo.txt
-    mapfile -t GROUP_PKGS < <(awk -F': ' '/^(Mandatory|Default) packages/{flag=1} /^Optional packages/{flag=0} flag{print $2}' /tmp/groupinfo.txt | sed 's/^ *//;s/ *$//' | grep -v '^$' | grep -E '^(plasma-|kde-|kf6-|qt6-|k[a-z])' | sort -u)
+    mapfile -t RAW_GROUP_PKGS < <(awk -F': ' '/^(Mandatory|Default) packages/{flag=1} /^Optional packages/{flag=0} flag{print $2}' /tmp/groupinfo.txt | sed 's/^ *//;s/ *$//' | grep -v '^$' | sort -u)
 
+    # Keep the usual plasma-/kde-/kf6-/qt6-/k*-prefixed group members, but also
+    # keep any group member versioned in lockstep with Plasma itself (e.g.
+    # powerdevil, bluedevil) even though its name doesn't match those prefixes -
+    # it still links against the frozen Qt6/KF6 ABI and must be frozen with it,
+    # or it floats to a live build compiled against a newer qt6-qtbase and
+    # crashes with an undefined-symbol error on private Qt6 property-binding
+    # symbols (see powerdevil's battery/brightness QML plugins).
+    mapfile -t GROUP_PKGS < <(dnf5 -y repoquery --arch=x86_64 --arch=noarch --qf=$'%{name}\t%{version}\n' "${RAW_GROUP_PKGS[@]}" 2>/dev/null \
+        | awk -F'\t' -v plasma="${PLASMA_VERSION}" '$1 ~ /^(plasma-|kde-|kf6-|qt6-|k[a-z])/ || $2 == plasma {print $1}' \
+        | sort -u)
+
+    # Same reasoning applies to the resolved dependency closure: a dependency
+    # pulled in transitively (like powerdevil, only reachable this way when it
+    # isn't a direct kde-desktop group member) still needs to be frozen if it's
+    # part of the same Plasma release, not just if its name starts with qt6-/kf6-.
     mapfile -t QT_KF_PKGS < <(dnf5 -y download --resolve --alldeps --arch=x86_64 --arch=noarch --url "${GROUP_PKGS[@]}" 2>/dev/null \
         | sed -E 's#.*/([^/]+)\.rpm$#\1#' \
-        | sed -E 's/-[^-]+-[^-]+\.[^.]+$//' \
-        | grep -E '^(qt6|kf6)-' \
-        | grep -vE -- '-devel$|-doc$|-html$|-examples$|-static$' \
+        | awk -F'-' '{
+            n = NF
+            version = $(n-1)
+            name = $1
+            for (i = 2; i <= n-2; i++) name = name "-" $i
+            print name, version
+        }' \
+        | awk -v plasma="${PLASMA_VERSION}" '
+            $1 !~ /-devel$|-doc$|-html$|-examples$|-static$/ &&
+            ($1 ~ /^(qt6|kf6)-/ || $2 == plasma) { print $1 }
+        ' \
         | sort -u)
 
     ALL_PKGS=("${GROUP_PKGS[@]}" "${QT_KF_PKGS[@]}")
