@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+# Docker sets the FORWARD chain policy to drop and only allow lists its own
+# bridges, so it silently drops traffic on unrelated interfaces such as
+# Waydroid's waydroid0 bridge even though waydroid's own nftables rules
+# accept it. DOCKER-USER is the chain Docker reserves for user rules and
+# never overwrites once created, so reopen it here on every Docker start.
+set -euo pipefail
+
+command -v iptables >/dev/null || exit 0
+iptables -w -S DOCKER-USER >/dev/null 2>&1 || exit 0
+
+for direction in "-i waydroid0" "-o waydroid0"; do
+    # shellcheck disable=SC2086
+    iptables -w -C DOCKER-USER $direction -j ACCEPT 2>/dev/null ||
+        iptables -w -I DOCKER-USER $direction -j ACCEPT
+done

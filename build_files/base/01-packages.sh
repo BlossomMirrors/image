@@ -114,6 +114,12 @@ NEGATIVO_PACKAGES=(
 echo "Installing ${#FEDORA_PACKAGES[@]} packages from Fedora repos and ${#NEGATIVO_PACKAGES[@]} from Negativo..."
 dnf5 -y install "${FEDORA_PACKAGES[@]}" "${NEGATIVO_PACKAGES[@]}"
 
+# waydroid selinux's own semodule call in its postinstall scriptlet does
+# not take effect inside the build container's policy store (same issue
+# as nvidia container.pp below), leaving waydroid_rootfs_t undefined and
+# the system.img mount rejected at runtime. Load it explicitly.
+semodule --verbose --install /usr/share/selinux/targeted/waydroid.pp
+
 # Install tailscale package from their repo
 echo "Installing tailscale from official repo..."
 dnf config-manager addrepo --overwrite --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
