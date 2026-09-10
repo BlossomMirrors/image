@@ -31,8 +31,9 @@ curl --retry 3 -Lo /etc/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub
 # installs below in this file when adding a new BlossomOS-patched package
 # that also happens to be a kde-desktop group member.
 BLOSSOM_OVERRIDE_PKGS=(
-    "plasma-setup" # ublue-os/staging COPR, see below in this file
-    "kinfocenter"  # repo.blossomos.org, see build_files/base/04-blossomos.sh
+    "plasma-setup"          # ublue-os/staging COPR, see below in this file
+    "kinfocenter"           # repo.blossomos.org, see build_files/base/04-blossomos.sh
+    "kaccounts-integration" # repo.blossomos.org, see build_files/base/04-blossomos.sh
 )
 if compgen -G "/ctx/plasma-rpms/*.rpm" > /dev/null; then
     RESOLVED_VERSION=$(awk -F= '/^resolved-plasma-version=/{print $2}' /ctx/plasma-rpms/MANIFEST.txt)

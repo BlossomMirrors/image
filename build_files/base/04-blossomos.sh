@@ -51,6 +51,12 @@ dnf5 download --destdir=/tmp/blossom-kinfocenter --disablerepo='*' --enablerepo=
 dnf5 install -y /tmp/blossom-kinfocenter/*.rpm
 rm -rf /tmp/blossom-kinfocenter
 
+# Replace stock kaccounts-integration with our BlossomOS-patched build
+mkdir -p /tmp/blossom-kaccounts-integration
+dnf5 download --destdir=/tmp/blossom-kaccounts-integration --disablerepo='*' --enablerepo="${REPO_ID}" kaccounts-integration
+dnf5 install -y /tmp/blossom-kaccounts-integration/*.rpm
+rm -rf /tmp/blossom-kaccounts-integration
+
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
