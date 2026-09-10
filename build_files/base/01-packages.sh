@@ -17,39 +17,6 @@ dnf5 config-manager setopt fedora-multimedia.priority=90
 mkdir -p /etc/flatpak/remotes.d/
 curl --retry 3 -Lo /etc/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# Pin Plasma/KDE Frameworks/Qt6 to a known-good snapshot captured by
-# `just fetch-plasma-rpms`, if one exists (see plasma-rpms/MANIFEST.txt).
-# Fedora Kinoite is semi-rolling, so without this a routine base image bump
-# can silently ship a newer Plasma release that breaks our patches.
-# This must run before any other versionlock below, otherwise those locks
-# pin the live (freshly pulled) versions and block the downgrade here.
-#
-# BLOSSOM_OVERRIDE_PKGS: packages BlossomOS replaces with its own patched
-# build further down the build (COPR or repo.blossomos.org), which would
-# otherwise get locked here to a stock Fedora build and block that install.
-# Check build_files/base/04-blossomos.sh, 05-blossomos-dx.sh, and the COPR
-# installs below in this file when adding a new BlossomOS-patched package
-# that also happens to be a kde-desktop group member.
-BLOSSOM_OVERRIDE_PKGS=(
-    "plasma-setup"          # ublue-os/staging COPR, see below in this file
-    "kinfocenter"           # repo.blossomos.org, see build_files/base/04-blossomos.sh
-    "kaccounts-integration" # repo.blossomos.org, see build_files/base/04-blossomos.sh
-    "kaccounts-providers"   # repo.blossomos.org, see build_files/base/04-blossomos.sh
-)
-if compgen -G "/ctx/plasma-rpms/*.rpm" > /dev/null; then
-    RESOLVED_VERSION=$(awk -F= '/^resolved-plasma-version=/{print $2}' /ctx/plasma-rpms/MANIFEST.txt)
-    echo "Pinning Plasma/KDE/Qt6 to frozen snapshot (Plasma ${RESOLVED_VERSION:-unknown})..."
-
-    BLOSSOM_OVERRIDE_PATTERN=$(IFS='|'; echo "${BLOSSOM_OVERRIDE_PKGS[*]}")
-    mapfile -t FROZEN_RPMS < <(find /ctx/plasma-rpms -maxdepth 1 -name '*.rpm' | grep -vE "/(${BLOSSOM_OVERRIDE_PATTERN})-[^/]+\.rpm\$")
-    dnf5 -y install "${FROZEN_RPMS[@]}"
-
-    mapfile -t FROZEN_PKGS < <(rpm -qp --qf '%{NAME}\n' "${FROZEN_RPMS[@]}" | sort -u)
-    dnf5 versionlock add "${FROZEN_PKGS[@]}"
-else
-    echo "No frozen Plasma snapshot found in plasma-rpms/ - tracking Fedora's live Plasma packages."
-fi
-
 # may break SDDM/KWin when upgraded
 dnf5 versionlock add "qt6-*"
 

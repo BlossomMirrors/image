@@ -37,7 +37,7 @@ build_files/
   shared/             # Scripts shared across variants
 system_files/
   shared/             # Runtime system files copied to / in the image
-image-versions.yml    # Pinned digests/versions (brew image, Plasma snapshot, etc.)
+image-versions.yml    # Pinned digests/versions (base image, brew image, etc.)
 ```
 
 ## Building locally
