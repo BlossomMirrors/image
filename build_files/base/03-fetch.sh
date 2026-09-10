@@ -21,14 +21,6 @@ ${origin_line}
 EOF
 done < <(grep -v '^#\|^[[:space:]]*$' /ctx/build_files/base/packages.flatpak)
 
-# Starship Shell Prompt
-curl "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-gnu.tar.gz" --retry 3 -Lo /tmp/starship.tar.gz
-curl "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-gnu.tar.gz.sha256" --retry 3 -Lo /tmp/starship.tar.gz.sha256
-
-echo "$(cat /tmp/starship.tar.gz.sha256) /tmp/starship.tar.gz" | sha256sum --check
-tar -xzf /tmp/starship.tar.gz -C /tmp
-install -c -m 0755 /tmp/starship /usr/bin
-
 # Nerdfont symbols
 # to fix motd and prompt atleast temporarily
 curl "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.zip" --retry 3 -Lo /tmp/nerdfontsymbols.zip
