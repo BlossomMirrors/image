@@ -196,6 +196,47 @@ copr_install_isolated "lizardbyte/beta" \
 copr_install_isolated "peterwu/rendezvous" \
     "bibata-cursor-themes"
 
+# Samsung Galaxy Book4's FocalTech Match-on-Chip fingerprint sensor
+# (2808:6553) isn't in stock libfprint. hichambel/libfprint-galaxybook
+# carries a rebuild of unmerged upstream libfprint MR#554 with FocalTech
+# MoC support. This is a version swap, not a plain install, so it can't
+# use copr_install_isolated (that only ever adds packages, it won't force
+# an already-installed one to come from a specific repo) — instead it
+# follows the same distro-sync --repo= pattern as the mesa/intel OVERRIDES
+# above. Swaps libfprint image-wide since there's no way to scope a dnf5
+# install to one machine; harmless for everyone else, since pam_fprintd
+# just falls through to password auth when no fingerprint is enrolled.
+echo "Installing patched libfprint for Galaxy Book4 fingerprint support..."
+if ! (
+    set -e
+    FPRINT_COPR="hichambel/libfprint-galaxybook"
+    FPRINT_REPO_ID="copr:copr.fedorainfracloud.org:${FPRINT_COPR//\//:}"
+    FPRINT_REPO_FILE="/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:${FPRINT_COPR//\//:}.repo"
+    dnf5 -y copr enable "$FPRINT_COPR" || true
+    dnf5 -y copr disable "$FPRINT_COPR" || true
+    if ! dnf5 repoquery --repo="$FPRINT_REPO_ID" libfprint &>/dev/null; then
+        echo "No native fedora-${FEDORA_MAJOR_VERSION} build in $FPRINT_COPR, falling back to fedora-43-x86_64 (ABI-compatible)..."
+        tee "$FPRINT_REPO_FILE" > /dev/null <<EOF
+[$FPRINT_REPO_ID]
+name=Copr repo for libfprint-galaxybook owned by hichambel (fedora-43-x86_64 fallback)
+baseurl=https://download.copr.fedorainfracloud.org/results/hichambel/libfprint-galaxybook/fedora-43-x86_64/
+type=rpm-md
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/hichambel/libfprint-galaxybook/pubkey.gpg
+repo_gpgcheck=0
+enabled=0
+EOF
+    fi
+    dnf5 -y install libfprint
+    dnf5 -y distro-sync --repo="$FPRINT_REPO_ID" libfprint
+    dnf5 versionlock add libfprint
+    authselect enable-feature with-fingerprint
+    authselect apply-changes
+)
+then
+    echo "WARNING: Galaxy Book4 libfprint patch failed to install, continuing with stock libfprint."
+fi
+
 # KDE Beta COPR
 # KDE_BETA_COPR="@kdesig/kde-beta"
 # KDE_BETA_REPO="copr:copr.fedorainfracloud.org:group_kdesig:kde-beta"

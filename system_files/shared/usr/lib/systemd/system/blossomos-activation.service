@@ -1,0 +1,8 @@
+[Unit]
+Description=Activate this machine with the BlossomOS licensing service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/blossomos-activation

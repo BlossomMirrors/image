@@ -1,0 +1,34 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+API_BASE="https://licensing.blossom.computer"
+
+primary_mac() {
+    local line mac
+    while read -r line; do
+        [[ "$line" == *LOOPBACK* ]] && continue
+        [[ "$line" == *",UP,"* || "$line" == *"<UP,"* || "$line" == *",UP>"* ]] || continue
+        mac=$(sed -n 's#.*link/[a-z]\+ \([0-9a-fA-F:]\{17\}\).*#\1#p' <<<"$line")
+        if [[ -n "$mac" && "$mac" != "00:00:00:00:00:00" ]]; then
+            echo "$mac"
+            return 0
+        fi
+    done < <(ip -o link show)
+    return 1
+}
+
+mac=$(primary_mac) || {
+    echo "blossomos-activation: no usable network interface found, skipping" >&2
+    exit 0
+}
+mac=${mac^^}
+
+serial=$(printf '%s' "$mac" | openssl dgst -sha256 -binary | base32 | tr -d '=' | cut -c1-12)
+if [[ -z "$serial" ]]; then
+    echo "blossomos-activation: failed to compute serial, skipping" >&2
+    exit 0
+fi
+
+if ! curl -fsS "$API_BASE/api/v1/license/$serial" -o /dev/null; then
+    echo "blossomos-activation: activation request failed, will retry on next timer run" >&2
+fi

@@ -1,0 +1,10 @@
+[Unit]
+Description=Restart fprintd after resume from suspend/hibernate
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart fprintd.service
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

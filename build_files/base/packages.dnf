@@ -3,6 +3,8 @@
 
 # Authentication / Directory Services
 adcli
+fprintd
+fprintd-pam
 krb5-workstation
 oddjob-mkhomedir
 pam-u2f
