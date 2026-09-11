@@ -33,10 +33,6 @@ systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
 
-# Galaxy Book4 FocalTech fingerprint sensor drops off after suspend/resume;
-# fprintd needs a restart to pick it back up. No-op on other hardware.
-systemctl enable fprintd-resume.service
-
 # dmem cgroup VRAM prioritization for foreground apps (games). No-op without
 # a kernel that supports the dmem cgroup controller, see kernel-blossomos'
 # cachyos patchset. plasma-foreground-booster.service has no [Install]
