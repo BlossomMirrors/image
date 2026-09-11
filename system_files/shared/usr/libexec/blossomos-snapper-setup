@@ -2,15 +2,35 @@
 # Auto-create a snapper config for /var/home on installs where it is its own
 # btrfs subvolume (the default Fedora Kinoite layout). Root is versioned by
 # ostree already, so home is the only place snapper/kio-snapshot are useful.
+#
+# The config is named "root" (not "home") purely because snapper's CLI and
+# GUI tools hardcode "root" as the config used when none is given with -c;
+# naming it anything else makes plain `snapper list` fail with "not
+# configured" even though a config exists.
 set -euo pipefail
 
-CONFIG_NAME=home
+CONFIG_NAME=root
+OLD_CONFIG_NAME=home
 MOUNT_POINT=/var/home
 CONFIG_FILE="/etc/snapper/configs/${CONFIG_NAME}"
+OLD_CONFIG_FILE="/etc/snapper/configs/${OLD_CONFIG_NAME}"
+SYSCONFIG_FILE=/etc/sysconfig/snapper
 
 # create-config errors out if the config already exists, and this runs on
 # every boot, so treat an existing config as already done.
 if [[ -f "$CONFIG_FILE" ]]; then
+    exit 0
+fi
+
+# Installs made before the config was renamed from "home" to "root" already
+# have a working snapper setup for /var/home, just under the old name. The
+# snapshot data lives under the subvolume itself, so this only needs a file
+# rename plus fixing up the config list, not a fresh create-config.
+if [[ -f "$OLD_CONFIG_FILE" ]]; then
+    mv "$OLD_CONFIG_FILE" "$CONFIG_FILE"
+    if [[ -f "$SYSCONFIG_FILE" ]]; then
+        sed -i "s/\"$OLD_CONFIG_NAME\"/\"$CONFIG_NAME\"/" "$SYSCONFIG_FILE"
+    fi
     exit 0
 fi
 
