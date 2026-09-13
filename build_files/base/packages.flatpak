@@ -12,7 +12,6 @@ org.mozilla.Thunderbird
 # Graphics / Media
 org.gimp.GIMP
 org.videolan.VLC
-net.displaycal.DisplayCAL
 org.kde.gwenview
 
 # Utilities
