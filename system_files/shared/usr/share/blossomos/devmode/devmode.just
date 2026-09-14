@@ -4,7 +4,6 @@ toggle:
     set -e
 
     IMAGE_NAME=$(jq -r '."image-name"' /usr/share/ublue-os/image-info.json)
-    REGISTRY="registry.blossomos.org/blossom/image"
 
     if lspci | grep -qi nvidia; then
         GPU_SUFFIX="-nvidia"
@@ -13,11 +12,17 @@ toggle:
     fi
 
     if [[ "$IMAGE_NAME" == *-dx* ]]; then
+        REGISTRY="registry.blossomos.org/blossom/image"
         TARGET="main${GPU_SUFFIX}"
         gum confirm "Switch back to ${TARGET}, dropping the developer experience image?" || exit 0
     else
         TAG=$(gum choose "latest" "main" --header "Enable developer mode using which image?")
         [[ -z "$TAG" ]] && exit 0
+        if [[ "$TAG" == "latest" ]]; then
+            REGISTRY="registry.blossomos.org/blossom/image-dev"
+        else
+            REGISTRY="registry.blossomos.org/blossom/image"
+        fi
         TARGET="${TAG}${GPU_SUFFIX}-dx"
         gum confirm "Switch to ${TARGET}?" || exit 0
     fi
