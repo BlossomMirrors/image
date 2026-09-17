@@ -577,16 +577,21 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
     # Image Name
     image_name=$({{ just }} image_name ${image} ${tag} ${flavor})
 
+    # Keyed on CI_JOB_ID so concurrent secureboot checks on the same runner
+    # don't clobber each other's scratch files (see podman-ci-wrapper.sh).
+    VMLINUZ="/tmp/vmlinuz-${CI_JOB_ID:-local}"
+    KERNEL_SIGN_CRT="/tmp/kernel-sign-${CI_JOB_ID:-local}.crt"
+
     # Get the vmlinuz to check
     kernel_release=$(${PODMAN} inspect "${image_name}":"${tag}" | jq -r '.[].Config.Labels["ostree.linux"]')
     TMP=$(${PODMAN} create "${image_name}":"${tag}" bash)
-    ${PODMAN} cp "$TMP":/usr/lib/modules/"${kernel_release}"/vmlinuz /tmp/vmlinuz
+    ${PODMAN} cp "$TMP":/usr/lib/modules/"${kernel_release}"/vmlinuz "${VMLINUZ}"
     ${PODMAN} rm "$TMP"
 
     # BlossomOS' own secure boot signing cert (committed alongside this
     # Justfile; see build_files/base/02-install-common-kernel-akmods.sh,
     # which signs vmlinuz against the matching private key)
-    cp secureboot.crt /tmp/kernel-sign.crt
+    cp secureboot.crt "${KERNEL_SIGN_CRT}"
 
     # Make sure we have sbverify
     CMD="$(command -v sbverify)"
@@ -594,8 +599,8 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
         temp_name="sbverify-${RANDOM}"
         ${PODMAN} run -dt \
             --entrypoint /bin/sh \
-            --volume /tmp/vmlinuz:/tmp/vmlinuz:z \
-            --volume /tmp/kernel-sign.crt:/tmp/kernel-sign.crt:z \
+            --volume "${VMLINUZ}:${VMLINUZ}:z" \
+            --volume "${KERNEL_SIGN_CRT}:${KERNEL_SIGN_CRT}:z" \
             --name ${temp_name} \
             alpine:edge
         ${PODMAN} exec ${temp_name} apk add sbsigntool
@@ -603,9 +608,9 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
     fi
 
     # Confirm that Signatures Are Good
-    $CMD --list /tmp/vmlinuz
+    $CMD --list "${VMLINUZ}"
     returncode=0
-    if ! $CMD --cert /tmp/kernel-sign.crt /tmp/vmlinuz; then
+    if ! $CMD --cert "${KERNEL_SIGN_CRT}" "${VMLINUZ}"; then
         echo "Secureboot Signature Failed...."
         returncode=1
     fi

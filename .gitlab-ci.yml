@@ -1,5 +1,6 @@
 stages:
   - build
+  - cleanup
 
 variables:
   BLOSSOM_REPO_URL: "https://repo.blossomos.org/rpm/"
@@ -18,8 +19,18 @@ variables:
     # Cleans up this job's isolated podman storage (see podman-ci-wrapper.sh
     # and the CI_JOB_ID/PODMAN forwarded into each `sudo ... ./build.sh`
     # call below) - runs even on job failure so it can't accumulate on the
-    # runner across pipelines.
+    # runner across pipelines. The shared-storage prune runs separately, in
+    # the cleanup-* jobs below, once all 3 build-* jobs in the group have
+    # finished, so it isn't racing another job's prune on the same default
+    # podman root.
     - sudo rm -rf "/var/lib/containers-ci/${CI_JOB_ID}" "/run/containers-ci/${CI_JOB_ID}"
+
+.cleanup_base:
+  stage: cleanup
+  tags:
+    - bigboi
+  allow_failure: true
+  script:
     - sudo podman system prune -af
 
 # latest (dev branch + schedule + manual)
@@ -96,3 +107,41 @@ build-nvidia-legacy-release:
     - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
   script:
     - sudo CI_JOB_ID="$CI_JOB_ID" PODMAN="$CI_PROJECT_DIR/podman-ci-wrapper.sh" ./build.sh main nvidia-legacy
+
+# cleanup (one prune per group, after all 3 of its build-* jobs finish, so
+# concurrent build-* jobs never race each other's prune on the shared
+# default podman root)
+
+cleanup-latest:
+  extends: .cleanup_base
+  needs:
+    - build-generic-latest
+    - build-nvidia-latest
+    - build-nvidia-legacy-latest
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH != "prerelease" && $CI_COMMIT_BRANCH != "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+      when: always
+
+cleanup-prerelease:
+  extends: .cleanup_base
+  needs:
+    - build-generic-prerelease
+    - build-nvidia-prerelease
+    - build-nvidia-legacy-prerelease
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "prerelease"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "prerelease" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
+      when: always
+
+cleanup-release:
+  extends: .cleanup_base
+  needs:
+    - build-generic-release
+    - build-nvidia-release
+    - build-nvidia-legacy-release
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release" && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule")'
+      when: always
