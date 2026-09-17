@@ -17,6 +17,14 @@ ln -s "/usr/share/fonts/google-noto-sans-cjk-fonts" "/usr/share/fonts/noto-cjk"
 # KDE Documentation is available online
 rm -rf /usr/share/doc/HTML
 
+# The composefs root has no backing device, so probe the real sysroot instead
+# See: https://github.com/ublue-os/bluefin/issues/2582
+if ! grep -q -- '--target=device /`' /usr/bin/grub2-mkconfig; then
+  echo "grub2-mkconfig no longer probes / for GRUB_DEVICE, drop this patch"
+  exit 1
+fi
+sed -i 's|--target=device /`|--target=device /sysroot`|' /usr/bin/grub2-mkconfig
+
 # ######
 # BASE IMAGE CHANGES
 # ######

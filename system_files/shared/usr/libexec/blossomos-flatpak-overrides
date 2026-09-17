@@ -18,3 +18,8 @@ SCOPE="$1"
 # extension mount so QtQuick Controls apps can resolve org.blossomos.style.
 flatpak override "${SCOPE}" \
     --env=QML2_IMPORT_PATH=/app/lib/qml:/usr/share/runtime/lib/plugins/BlossomUI/lib/qml
+
+# Signal only supports the GNOME libsecret keyring out of the box. BlossomOS
+# ships KDE, so point it at KWallet 6 instead.
+flatpak override "${SCOPE}" \
+    --env=SIGNAL_PASSWORD_STORE=kwallet6 org.signal.Signal

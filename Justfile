@@ -14,6 +14,7 @@ images := '(
 flavors := '(
     [main]=main
     [nvidia-open]=nvidia-open
+    [nvidia-legacy]=nvidia-legacy
 )'
 tags := '(
     [stable]=stable
@@ -122,8 +123,12 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     fi
 
     # Fedora Version
+    # Keyed on CI_JOB_ID so concurrent build-* jobs on the same runner (see
+    # podman-ci-wrapper.sh) don't clobber each other's scratch files.
+    MANIFEST_JSON="/tmp/manifest-${CI_JOB_ID:-local}.json"
+    REPOTAGS_JSON="/tmp/repotags-${CI_JOB_ID:-local}.json"
     if [[ {{ ghcr }} == "0" ]]; then
-        rm -f /tmp/manifest.json
+        rm -f "${MANIFEST_JSON}"
     fi
     fedora_version=$({{ just }} fedora_version '{{ image }}' '{{ tag }}' '{{ flavor }}' '{{ kernel_pin }}')
 
@@ -154,10 +159,10 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     else
         ver="${tag}-${fedora_version}.$(date +%Y%m%d)"
     fi
-    skopeo list-tags docker://{{ registry }}/blossomos/${image_name} > /tmp/repotags.json 2>/dev/null || echo '{"Tags":[]}' > /tmp/repotags.json
-    if [[ $(jq "any(.Tags[]; contains(\"$ver\"))" < /tmp/repotags.json) == "true" ]]; then
+    skopeo list-tags docker://{{ registry }}/blossomos/${image_name} > "${REPOTAGS_JSON}" 2>/dev/null || echo '{"Tags":[]}' > "${REPOTAGS_JSON}"
+    if [[ $(jq "any(.Tags[]; contains(\"$ver\"))" < "${REPOTAGS_JSON}") == "true" ]]; then
         POINT="1"
-        while $(jq -e "any(.Tags[]; contains(\"$ver.$POINT\"))" < /tmp/repotags.json)
+        while $(jq -e "any(.Tags[]; contains(\"$ver.$POINT\"))" < "${REPOTAGS_JSON}")
         do
             (( POINT++ ))
         done
@@ -189,6 +194,9 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     BUILD_ARGS+=("--build-arg" "UBLUE_IMAGE_TAG=${tag}")
     if [[ -n "${IMAGE_REF:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "IMAGE_REF=${IMAGE_REF}")
+    fi
+    if [[ -n "${PUBLISHED_TAG:-}" ]]; then
+        BUILD_ARGS+=("--build-arg" "PUBLISHED_TAG=${PUBLISHED_TAG}")
     fi
     if [[ -n "${BLOSSOM_REPO_URL:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "BLOSSOM_REPO_URL=${BLOSSOM_REPO_URL}")
@@ -225,7 +233,9 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     "coreos-testing") BUILD_ARGS+=("--cpp-flag=-DZFS") ;;
     esac
 
-    if [[ "${image_name}" =~ nvidia ]]; then
+    if [[ "${image_name}" =~ nvidia-legacy ]]; then
+        BUILD_ARGS+=("--cpp-flag=-DNVIDIA_LEGACY")
+    elif [[ "${image_name}" =~ nvidia ]]; then
         BUILD_ARGS+=("--cpp-flag=-DNVIDIA")
     fi
 
@@ -237,6 +247,18 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
         PODMAN_BUILD_ARGS+=(--secret "id=GITHUB_TOKEN,env=GITHUB_TOKEN")
     else
         echo "No GitHub token found - build may hit rate limit"
+    fi
+
+    # Add secure boot signing key as build secret, if present (see
+    # .gitlab-ci.yml, which writes it from the SECUREBOOT_PRIVATE_KEY CI
+    # variable, same as cosign.key). Signs the custom kernel's vmlinuz in
+    # 02-install-common-kernel-akmods.sh so it verifies against the MOK
+    # enrolled via /usr/share/blossomos/secureboot.
+    if [[ -f "secureboot.key" ]]; then
+        echo "Adding secure boot signing key as build secret"
+        PODMAN_BUILD_ARGS+=(--secret "id=SECUREBOOT_KEY,src=secureboot.key")
+    else
+        echo "No secure boot signing key found (secureboot.key) - kernel vmlinuz will not be signed for secure boot"
     fi
 
     ${PODMAN} build "${PODMAN_BUILD_ARGS[@]}" .
@@ -275,7 +297,7 @@ build-pipeline image="blossomos" tag="latest" flavor="main" kernel_pin="":
 # Rechunk Image
 [group('Image')]
 [private]
-rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0":
+rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0" $prev_ref="":
     #!/usr/bin/bash
 
     echo "::group:: Rechunk Prep"
@@ -395,7 +417,7 @@ rechunk $image="blossomos" $tag="latest" $flavor="main" ghcr="0" pipeline="0":
         --volume "$PWD:/var/git" \
         --volume cache_ostree:/var/ostree \
         --env REPO=/var/ostree/repo \
-        --env PREV_REF={{ registry }}/blossomos/"${image_name}":"${tag}" \
+        --env PREV_REF="${prev_ref:-{{ registry }}/blossomos/${image_name}:${tag}}" \
         --env OUT_NAME="$OUT_NAME" \
         --env LABELS="${LABELS}" \
         --env "DESCRIPTION='BlossomOS'" \
@@ -505,6 +527,44 @@ verify-container key="" container="":
         exit 1
     fi
 
+# Resolve the base image digest that was active at a given Unix timestamp,
+# using Quay.io's per-tag history (start_ts/end_ts window per revision).
+# Note: Quay only retains tag history for its time-machine window (commonly
+# a few months), so timestamps older than that will not resolve.
+[group('Utility')]
+resolve-digest-at $timestamp $fedora_tag=latest_version:
+    #!/usr/bin/bash
+    set -eou pipefail
+
+    namespace_repo="${base_image_org#quay.io/}/${base_image_name}"
+    page=1
+    digest=""
+
+    while :; do
+        response=$(curl --retry 3 -sf "https://quay.io/api/v1/repository/${namespace_repo}/tag/?specificTag=${fedora_tag}&onlyActiveTags=false&limit=100&page=${page}")
+
+        digest=$(jq -r --argjson ts "${timestamp}" --arg tag "${fedora_tag}" '
+            [.tags[] | select(.name == $tag and .start_ts <= $ts and ((.end_ts // ($ts + 1)) > $ts))][0].manifest_digest // empty
+        ' <<< "${response}")
+
+        if [[ -n "${digest}" ]]; then
+            break
+        fi
+
+        has_additional=$(jq -r '.has_additional' <<< "${response}")
+        if [[ "${has_additional}" != "true" ]]; then
+            break
+        fi
+        (( page++ ))
+    done
+
+    if [[ -z "${digest}" ]]; then
+        echo "No '${fedora_tag}' revision of ${namespace_repo} was active at ${timestamp} ($(date -u -d "@${timestamp}" +%Y-%m-%dT%H:%M:%SZ))" >&2
+        exit 1
+    fi
+
+    echo "${digest}"
+
 # Secureboot Check
 [group('Utility')]
 secureboot $image="blossomos" $tag="latest" $flavor="main":
@@ -517,17 +577,21 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
     # Image Name
     image_name=$({{ just }} image_name ${image} ${tag} ${flavor})
 
+    # Keyed on CI_JOB_ID so concurrent secureboot checks on the same runner
+    # don't clobber each other's scratch files (see podman-ci-wrapper.sh).
+    VMLINUZ="/tmp/vmlinuz-${CI_JOB_ID:-local}"
+    KERNEL_SIGN_CRT="/tmp/kernel-sign-${CI_JOB_ID:-local}.crt"
+
     # Get the vmlinuz to check
     kernel_release=$(${PODMAN} inspect "${image_name}":"${tag}" | jq -r '.[].Config.Labels["ostree.linux"]')
     TMP=$(${PODMAN} create "${image_name}":"${tag}" bash)
-    ${PODMAN} cp "$TMP":/usr/lib/modules/"${kernel_release}"/vmlinuz /tmp/vmlinuz
+    ${PODMAN} cp "$TMP":/usr/lib/modules/"${kernel_release}"/vmlinuz "${VMLINUZ}"
     ${PODMAN} rm "$TMP"
 
-    # Get the Public Certificates
-    curl --retry 3 -Lo /tmp/kernel-sign.der https://github.com/ublue-os/akmods/raw/main/certs/public_key.der
-    curl --retry 3 -Lo /tmp/akmods.der https://github.com/ublue-os/akmods/raw/main/certs/public_key_2.der
-    openssl x509 -in /tmp/kernel-sign.der -out /tmp/kernel-sign.crt
-    openssl x509 -in /tmp/akmods.der -out /tmp/akmods.crt
+    # BlossomOS' own secure boot signing cert (committed alongside this
+    # Justfile; see build_files/base/02-install-common-kernel-akmods.sh,
+    # which signs vmlinuz against the matching private key)
+    cp secureboot.crt "${KERNEL_SIGN_CRT}"
 
     # Make sure we have sbverify
     CMD="$(command -v sbverify)"
@@ -535,9 +599,8 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
         temp_name="sbverify-${RANDOM}"
         ${PODMAN} run -dt \
             --entrypoint /bin/sh \
-            --volume /tmp/vmlinuz:/tmp/vmlinuz:z \
-            --volume /tmp/kernel-sign.crt:/tmp/kernel-sign.crt:z \
-            --volume /tmp/akmods.crt:/tmp/akmods.crt:z \
+            --volume "${VMLINUZ}:${VMLINUZ}:z" \
+            --volume "${KERNEL_SIGN_CRT}:${KERNEL_SIGN_CRT}:z" \
             --name ${temp_name} \
             alpine:edge
         ${PODMAN} exec ${temp_name} apk add sbsigntool
@@ -545,9 +608,9 @@ secureboot $image="blossomos" $tag="latest" $flavor="main":
     fi
 
     # Confirm that Signatures Are Good
-    $CMD --list /tmp/vmlinuz
+    $CMD --list "${VMLINUZ}"
     returncode=0
-    if ! $CMD --cert /tmp/kernel-sign.crt /tmp/vmlinuz || ! $CMD --cert /tmp/akmods.crt /tmp/vmlinuz; then
+    if ! $CMD --cert "${KERNEL_SIGN_CRT}" "${VMLINUZ}"; then
         echo "Secureboot Signature Failed...."
         returncode=1
     fi
@@ -598,7 +661,7 @@ generate-build-tags image="blossomos" tag="latest" flavor="main" kernel_pin="" g
     TODAY="$(date +%A)"
     WEEKLY="Tuesday"
     if [[ {{ ghcr }} == "0" ]]; then
-        rm -f /tmp/manifest.json
+        rm -f "/tmp/manifest-${CI_JOB_ID:-local}.json"
     fi
     FEDORA_VERSION="$({{ just }} fedora_version '{{ image }}' '{{ tag }}' '{{ flavor }}' '{{ kernel_pin }}')"
     DEFAULT_TAG=$({{ just }} generate-default-tag {{ tag }} {{ ghcr }})

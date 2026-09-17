@@ -14,13 +14,13 @@ source /ctx/build_files/shared/copr-helpers.sh
 # ublue-os akmods image, whose ostree.linux label carries a fc44 dist tag,
 # but repo.blossomos.org's kernel package NVR does not carry one. Bump this
 # by hand whenever a new kernel build is published to repo.blossomos.org.
-BLOSSOM_KERNEL_VERSION="7.1.5-201"
+BLOSSOM_KERNEL_VERSION="7.2.5-200"
 
 blossom_repo_setup
 
 # Remove Existing Kernel
 for pkg in kernel kernel{-core,-modules,-modules-core,-modules-extra,-tools-libs,-tools}; do
-    rpm --erase "${pkg}" --nodeps
+    rpm --erase "${pkg}" --nodeps || echo "Warning: Failed to remove $pkg"
 done
 
 # cleanup leftovers that are not covered by kernel-* packages for some reason
@@ -49,6 +49,24 @@ rm -rf /tmp/blossom-kernel
 
 dnf5 versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
+# Secure boot signing. kernel-blossomos' rpmbuild PE-signs vmlinuz itself,
+# but (with no real signing HSM/token present) pesign silently falls back to
+# Fedora's local self-test cert, which no one's shim trusts. Re-sign with
+# BlossomOS' own key here so the result verifies against the MOK enrolled via
+# /usr/share/blossomos/secureboot (see system_files) and iso's installer.
+mkdir -p /usr/share/blossomos/secureboot
+cp /ctx/secureboot.der /usr/share/blossomos/secureboot/blossomos-secureboot.der
+if [[ -f /run/secrets/SECUREBOOT_KEY ]]; then
+    dnf5 -y install sbsigntools
+    KREL="${BLOSSOM_KERNEL_VERSION}.x86_64"
+    sbsign --key /run/secrets/SECUREBOOT_KEY --cert /ctx/secureboot.crt \
+        --output "/usr/lib/modules/${KREL}/vmlinuz.signed" "/usr/lib/modules/${KREL}/vmlinuz"
+    mv "/usr/lib/modules/${KREL}/vmlinuz.signed" "/usr/lib/modules/${KREL}/vmlinuz"
+    dnf5 -y remove sbsigntools
+else
+    echo "WARNING: no secure boot signing key (secureboot.key) - vmlinuz keeps rpmbuild's untrusted test signature, secure boot will fail"
+fi
+
 mkdir -p /etc/pki/akmods/certs
 curl "https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.der" --retry 3 -Lo /etc/pki/akmods/certs/akmods-ublue.der
 
@@ -74,13 +92,21 @@ copr_install_isolated "ublue-os/akmods" akmod-xone xone-kmod-common || true
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod xone || true
 
 # v4l2loopback from RPM Fusion, same reasoning as xone above
-dnf -y install "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm"
+#
+# Fetched with curl (not `dnf install <url>`) so a corrupted/truncated
+# transfer is retried instead of landing straight in the persistent
+# /var/cache/libdnf5 cache mount, where a bad file would keep failing
+# every subsequent build until manually evicted.
+curl "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+    --retry 3 -Lo /tmp/rpmfusion-free-release.rpm
+dnf5 install -y /tmp/rpmfusion-free-release.rpm
+rm -f /tmp/rpmfusion-free-release.rpm
 dnf -y install akmod-v4l2loopback || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/rpmfusion-free*.repo
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod v4l2loopback || true
 
 # OpenRazer from hardware:razer repo (not a COPR)
-dnf -y config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
+dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 

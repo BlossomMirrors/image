@@ -1,0 +1,13 @@
+[Unit]
+Description=BlossomOS Boot Splash Message
+DefaultDependencies=no
+After=plymouth-start.service
+Before=plymouth-quit.service sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-bootmsg
+
+[Install]
+WantedBy=sysinit.target

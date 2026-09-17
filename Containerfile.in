@@ -3,7 +3,7 @@ ARG BASE_IMAGE_NAME="${BASE_IMAGE_NAME}:-kinoite"
 ARG BASE_IMAGE="${BASE_IMAGE_ORG}/${BASE_IMAGE_NAME}"
 ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION}:-44"
 ARG AKMODS_FLAVOR="${AKMODS_FLAVOR}-${FEDORA_MAJOR_VERSION}:-coreos-testing-44"
-ARG KERNEL="${KERNEL}:-7.1.5-201.fc44.x86_64"
+ARG KERNEL="${KERNEL}:-7.2.5-200.fc44.x86_64"
 ARG BREW_IMAGE="${BREW_IMAGE}:-ghcr.io/ublue-os/brew:latest"
 ARG BREW_IMAGE_SHA=""
 
@@ -11,7 +11,7 @@ FROM ${BREW_IMAGE}@${BREW_IMAGE_SHA} AS brew
 
 FROM ghcr.io/ublue-os/akmods:${AKMODS_FLAVOR}-${FEDORA_MAJOR_VERSION}-${KERNEL} AS akmods
 
-#if defined(NVIDIA)
+#if defined(NVIDIA) || defined(NVIDIA_LEGACY)
 FROM ghcr.io/ublue-os/akmods-nvidia-open:${AKMODS_FLAVOR}-${FEDORA_MAJOR_VERSION}-${KERNEL} AS akmods-nvidia-open
 #endif
 
@@ -27,6 +27,11 @@ COPY --from=brew /system_files /system_files/shared
 
 COPY /system_files /system_files
 
+# /* public secure boot signing cert - baked in, unlike secureboot.key which */
+# /* is only ever mounted in as a --secret, never copied into a layer       */
+COPY /secureboot.crt /secureboot.crt
+COPY /secureboot.der /secureboot.der
+
 # /* blossomos image section */
 FROM ${BASE_IMAGE}:${FEDORA_MAJOR_VERSION} AS base
 
@@ -38,6 +43,7 @@ ARG IMAGE_VENDOR="blossomos"
 ARG KERNEL=""
 ARG SHA_HEAD_SHORT="dedbeef"
 ARG UBLUE_IMAGE_TAG="latest"
+ARG PUBLISHED_TAG=""
 ARG VERSION=""
 ARG IMAGE_FLAVOR=""
 ARG IMAGE_REF=""
@@ -47,7 +53,7 @@ ARG BLOSSOM_REPO_URL="https://repo.blossomos.org/rpm/"
 ENV PATH="/tmp/scripts/helpers:${PATH}"
 
 # /* blossomos:latest no zfs or nvidia */
-#if !defined(NVIDIA) && !defined(ZFS)
+#if !defined(NVIDIA) && !defined(NVIDIA_LEGACY) && !defined(ZFS)
 RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=tmpfs,dst=/var \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
@@ -56,6 +62,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/common,dst=/tmp/rpms/common \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -63,7 +70,7 @@ RUN --mount=type=tmpfs,dst=/boot \
 #endif
 
 # /* blossomos:stable with zfs no nvidia */
-#if !defined(NVIDIA) && defined(ZFS)
+#if !defined(NVIDIA) && !defined(NVIDIA_LEGACY) && defined(ZFS)
 RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=tmpfs,dst=/var \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
@@ -73,6 +80,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=bind,from=akmods-zfs,src=/rpms/kmods/zfs,dst=/tmp/rpms/kmods/zfs \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -91,6 +99,7 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
     --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
@@ -110,11 +119,52 @@ RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms/kmods/zfs,dst=/tmp/rpms/kmods/zfs \
     --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
     /ctx/build_files/base/03-fetch.sh && \
     /ctx/build_files/base/04-nvidia.sh && \
+    /ctx/build_files/base/zfs.sh
+#endif
+
+# /* blossomos-nvidia-legacy:latest no zfs, Maxwell/Pascal/Volta proprietary driver */
+#if defined(NVIDIA_LEGACY) && !defined(ZFS)
+RUN --mount=type=tmpfs,dst=/boot \
+    --mount=type=tmpfs,dst=/var \
+    --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=bind,from=akmods,src=/kernel-rpms,dst=/tmp/kernel-rpms \
+    --mount=type=bind,from=akmods,src=/rpms/common,dst=/tmp/rpms/common \
+    --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
+    --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
+    --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
+    /ctx/build_files/shared/build.sh && \
+    /ctx/build_files/base/01-packages.sh && \
+    /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
+    /ctx/build_files/base/03-fetch.sh && \
+    /ctx/build_files/base/04-nvidia-legacy.sh
+#endif
+
+# /* blossomos-nvidia-legacy:stable with ZFS */
+#if defined(NVIDIA_LEGACY) && defined(ZFS)
+RUN --mount=type=tmpfs,dst=/boot \
+    --mount=type=tmpfs,dst=/var \
+    --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=bind,from=akmods,src=/kernel-rpms,dst=/tmp/kernel-rpms \
+    --mount=type=bind,from=akmods,src=/rpms/common,dst=/tmp/rpms/common \
+    --mount=type=bind,from=akmods,src=/rpms/kmods,dst=/tmp/rpms/kmods \
+    --mount=type=bind,from=akmods-nvidia-open,src=/rpms,dst=/tmp/rpms/nvidia \
+    --mount=type=bind,from=akmods-zfs,src=/rpms/kmods/zfs,dst=/tmp/rpms/kmods/zfs \
+    --mount=type=secret,id=GITHUB_TOKEN \
+    --mount=type=secret,id=SECUREBOOT_KEY \
+    /ctx/build_files/shared/build.sh && \
+    /ctx/build_files/base/01-packages.sh && \
+    /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
+    /ctx/build_files/base/03-fetch.sh && \
+    /ctx/build_files/base/04-nvidia-legacy.sh && \
     /ctx/build_files/base/zfs.sh
 #endif
 

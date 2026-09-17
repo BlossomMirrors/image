@@ -83,9 +83,15 @@ NEGATIVO_PACKAGES=(
 echo "Installing ${#FEDORA_PACKAGES[@]} packages from Fedora repos and ${#NEGATIVO_PACKAGES[@]} from Negativo..."
 dnf5 -y install "${FEDORA_PACKAGES[@]}" "${NEGATIVO_PACKAGES[@]}"
 
+# waydroid selinux's own semodule call in its postinstall scriptlet does
+# not take effect inside the build container's policy store (same issue
+# as nvidia container.pp below), leaving waydroid_rootfs_t undefined and
+# the system.img mount rejected at runtime. Load it explicitly.
+semodule --verbose --install /usr/share/selinux/targeted/waydroid.pp
+
 # Install tailscale package from their repo
 echo "Installing tailscale from official repo..."
-dnf config-manager addrepo --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+dnf config-manager addrepo --overwrite --from-repofile=https://pkgs.tailscale.com/stable/fedora/tailscale.repo
 dnf config-manager setopt tailscale-stable.enabled=0
 dnf -y install --enablerepo='tailscale-stable' tailscale
 
@@ -102,7 +108,7 @@ repo_gpgcheck=0
 EOF
 rpm --import https://pkgs.netbird.io/yum/repodata/repomd.xml.key
 dnf5 download --destdir=/tmp/netbird --arch="$(rpm -E '%_arch')" --enablerepo='netbird' netbird
-rpm -i --noscripts /tmp/netbird/netbird*.rpm
+rpm -i --noscripts --replacepkgs /tmp/netbird/netbird*.rpm
 rm -rf /tmp/netbird
 # netbird service install (run by %post) is skipped above because it tries to
 # start the daemon in the build context. Write the unit file it would generate.
@@ -127,7 +133,7 @@ EOF
 
 # Install Mullvad VPN from their official repo
 echo "Installing mullvad-vpn from official repo..."
-dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
+dnf config-manager addrepo --overwrite --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
 dnf config-manager setopt mullvad-stable.enabled=0
 dnf5 download --destdir=/tmp/mullvad --enablerepo='mullvad-stable' mullvad-vpn
 # rpm -i below does not resolve dependencies like dnf install would
@@ -135,7 +141,7 @@ dnf5 -y install dbus-libs libXScrnSaver libnotify
 # /opt is a symlink to /var/opt in this base image, and /var/opt does not exist yet
 # at this point in the build, so the rpm cannot unpack its /opt/Mullvad VPN payload
 mkdir -p /var/opt
-rpm -i --noscripts /tmp/mullvad/MullvadVPN*.rpm
+rpm -i --noscripts --replacepkgs /tmp/mullvad/MullvadVPN*.rpm
 rm -rf /tmp/mullvad
 
 # clean-stage.sh wipes /opt at the end of the build for downstream image compatibility,
@@ -160,22 +166,6 @@ chmod u+s /usr/bin/mullvad-exclude
 
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
-
-# From ublue-os/staging
-copr_install_isolated "ublue-os/staging" \
-    "fw-fanctrl" \
-    "plasma-setup"
-
-# fw-fanctrl's periodic EC fan-duty writes (enabled by the cros_ec_hwmon PWM
-# patches in fw16 patches/) can contend with USB-PD/typec renegotiation on
-# the same EC command bus and has been observed to keep eGPU enclosures from
-# powering on when hotplugged. Lower the write frequency as a general
-# mitigation; blossomos-fanctrl-pause.service covers the hotplug window itself.
-if [[ -f /etc/fw-fanctrl/config.json ]]; then
-    jq '.strategies |= map_values(.fanSpeedUpdateFrequency = 10)' \
-        /etc/fw-fanctrl/config.json > /tmp/fw-fanctrl-config.json
-    mv /tmp/fw-fanctrl-config.json /etc/fw-fanctrl/config.json
-fi
 
 # From ublue-os/packages
 copr_install_isolated "ublue-os/packages" \
@@ -240,6 +230,9 @@ EXCLUDED_PACKAGES=(
     podman-docker
     kaddressbook
     fcitx
+    fcitx-qt5
+    isoimagewriter
+    kamoso
 )
 
 # Version-specific package exclusions
@@ -267,7 +260,7 @@ if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
 fi
 
 # we can't remove plasma-lookandfeel-fedora package because it is a dependency of plasma-desktop
-rpm --erase --nodeps plasma-lookandfeel-fedora
+rpm --erase --nodeps plasma-lookandfeel-fedora || echo "Warning: Failed to remove plasma-lookandfeel-fedora"
 # rpm erase doesn't remove actual files
 rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/
 

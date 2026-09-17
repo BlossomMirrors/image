@@ -22,7 +22,6 @@ alsa-utils
 borgbackup
 rclone
 restic
-timeshift
 
 # Bluetooth
 # (base Kinoite ships bluez — no duplicate needed)
@@ -41,6 +40,10 @@ gvfs
 gvfs-fuse
 squashfs-tools
 symlinks
+
+# Snapshots
+kio-snapshot
+snapper
 
 # Fonts
 google-noto-sans-balinese-fonts
@@ -191,7 +194,6 @@ moby-engine
 # Web / Media Apps
 filelight
 isoimagewriter
-kamoso
 speedtest-cli
 webkit2gtk4.1
 xournalpp

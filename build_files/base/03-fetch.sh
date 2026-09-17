@@ -8,31 +8,23 @@ set -eoux pipefail
 flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # Generate flatpak preinstall files from packages.flatpak
-# Format: <app_id> [remote]  — remote is optional, adds Origin= when specified
+# Format: <app_id> [remote] [branch] — see packages.flatpak for details
 mkdir -p /usr/share/flatpak/preinstall.d
-while read -r app_id remote; do
+while read -r app_id remote branch; do
     origin_line=""
     [[ -n "${remote:-}" ]] && origin_line="Origin=${remote}"
     cat > "/usr/share/flatpak/preinstall.d/${app_id}.preinstall" << EOF
 [Flatpak Preinstall ${app_id}]
-Branch=stable
+Branch=${branch:-stable}
 IsRuntime=false
 ${origin_line}
 EOF
 done < <(grep -v '^#\|^[[:space:]]*$' /ctx/build_files/base/packages.flatpak)
 
-# Starship Shell Prompt
-curl "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-gnu.tar.gz" --retry 3 -Lo /tmp/starship.tar.gz
-curl "https://github.com/starship/starship/releases/latest/download/starship-$(uname -m)-unknown-linux-gnu.tar.gz.sha256" --retry 3 -Lo /tmp/starship.tar.gz.sha256
-
-echo "$(cat /tmp/starship.tar.gz.sha256) /tmp/starship.tar.gz" | sha256sum --check
-tar -xzf /tmp/starship.tar.gz -C /tmp
-install -c -m 0755 /tmp/starship /usr/bin
-
 # Nerdfont symbols
 # to fix motd and prompt atleast temporarily
 curl "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.zip" --retry 3 -Lo /tmp/nerdfontsymbols.zip
-unzip /tmp/nerdfontsymbols.zip -d /tmp
+unzip -o /tmp/nerdfontsymbols.zip -d /tmp
 mkdir -p /usr/share/fonts/nerd-fonts/NerdFontsSymbolsOnly/
 mv /tmp/SymbolsNerdFont*.ttf /usr/share/fonts/nerd-fonts/NerdFontsSymbolsOnly/
 

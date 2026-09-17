@@ -15,13 +15,30 @@ systemctl disable tailscaled.service
 systemctl disable netbird.service
 systemctl disable mullvad-daemon.service
 systemctl disable mullvad-early-boot-blocking.service
+# systemd-oomd's default cgroup pressure thresholds kill foreground apps
+# (Plasma, browser tabs) too eagerly under memory pressure before MGLRU's
+# working-set protection gets a chance to help. Disable it; the kernel's own
+# OOM killer remains as the last resort.
+systemctl disable systemd-oomd.service
+systemctl disable systemd-oomd.socket
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
-systemctl enable blossomos-dualboot-detect.service
+systemctl enable blossomos-grub-migrate.service
+systemctl enable blossomos-snapper-setup.service
+systemctl enable snapper-timeline.timer
+systemctl enable snapper-cleanup.timer
+systemctl enable blossomos-bootmsg.service
 systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
+
+# dmem cgroup VRAM prioritization for foreground apps (games). No-op without
+# a kernel that supports the dmem cgroup controller, see kernel-blossomos'
+# cachyos patchset. plasma-foreground-booster.service has no [Install]
+# section; it's autostarted via its KDE autostart .desktop entry instead.
+systemctl enable dmemcg-booster-system.service
+systemctl --global enable dmemcg-booster-user.service
 
 # Enable kAirPods user service for all users
 systemctl --global enable kairpodsd.service
@@ -34,6 +51,19 @@ systemctl enable flatpak-nuke-fedora.service
 # installed systems stuck trusting a stale key
 systemctl enable blossomos-flatpak-key-refresh.timer
 
+# Report this machine to the BlossomOS licensing service at boot and hourly
+# thereafter, activating it on first contact
+systemctl enable blossomos-activation.timer
+
+# Nothing on this image otherwise runs `flatpak preinstall`, so
+# packages.flatpak's preinstall.d entries would never reach machines that
+# were already provisioned before an entry was added
+systemctl enable flatpak-preinstall.service
+
+# org.kde.KStyle.BlossomUI needs all three of its branches installed at
+# once, which preinstall.d can't express (one branch per app id)
+systemctl enable blossomos-flatpak-kstyle-branches.service
+
 # disable sunshine service
 systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 
@@ -41,7 +71,13 @@ systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 systemctl enable rpm-ostreed-automatic.timer
 
 # Hide Desktop Files. Hidden removes mime associations
-for file in htop nvtop; do
+# kbd-layout-viewer5 ships from fcitx5-configtool; its actual config UI
+# (org.fcitx.fcitx5-config-qt.desktop) already ships with NoDisplay=true.
+# fcitx5-configtool.desktop and org.fcitx.Fcitx5.desktop ship from
+# fcitx5-data (a base fcitx5 dependency) with no NoDisplay of their own,
+# and would otherwise leak the GTK config tool and the bare IME daemon
+# into the launcher alongside the KCM entry.
+for file in htop nvtop kbd-layout-viewer5 fcitx5-configtool org.fcitx.Fcitx5; do
     if [[ -f "/usr/share/applications/${file}.desktop" ]]; then
         desktop-file-edit --set-key=Hidden --set-value=true /usr/share/applications/${file}.desktop
     fi

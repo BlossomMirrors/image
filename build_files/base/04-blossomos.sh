@@ -25,8 +25,16 @@ dnf5 -y install \
     blossomos-skel \
     blossomui \
     blossom-sound-theme \
+    blossom-udev-rules \
+    blossom-plymouth-theme \
     blossom-kcm-software-update \
+    blossom-kcm-help-support \
+    blossom-welcome \
     quick-appearance-kcm \
+    dmemcg-booster \
+    kcgroups-dmemcg \
+    plasma-foreground-booster \
+    goxlr-utility \
     atuin \
     umu-launcher \
     adjust \
@@ -35,11 +43,27 @@ dnf5 -y install \
     micro \
     python3-pip
 
+# Use our sweeping-bar theme instead of the stock spinner; 19-initramfs.sh
+# rebuilds the initramfs later in the build and will pick this up
+plymouth-set-default-theme blossom
+
 # Replace stock kinfocenter with our BlossomOS-patched build
 mkdir -p /tmp/blossom-kinfocenter
 dnf5 download --destdir=/tmp/blossom-kinfocenter --disablerepo='*' --enablerepo="${REPO_ID}" kinfocenter
 dnf5 install -y /tmp/blossom-kinfocenter/*.rpm
 rm -rf /tmp/blossom-kinfocenter
+
+# Replace stock kaccounts-integration with our BlossomOS-patched build
+mkdir -p /tmp/blossom-kaccounts-integration
+dnf5 download --destdir=/tmp/blossom-kaccounts-integration --disablerepo='*' --enablerepo="${REPO_ID}" kaccounts-integration
+dnf5 install -y /tmp/blossom-kaccounts-integration/*.rpm
+rm -rf /tmp/blossom-kaccounts-integration
+
+# Replace stock kaccounts-providers with our BlossomOS-patched build
+mkdir -p /tmp/blossom-kaccounts-providers
+dnf5 download --destdir=/tmp/blossom-kaccounts-providers --disablerepo='*' --enablerepo="${REPO_ID}" kaccounts-providers
+dnf5 install -y /tmp/blossom-kaccounts-providers/*.rpm
+rm -rf /tmp/blossom-kaccounts-providers
 
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo

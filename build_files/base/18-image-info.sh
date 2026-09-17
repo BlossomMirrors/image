@@ -20,7 +20,9 @@ IMAGE_REF="${IMAGE_REF:-ostree-image-signed:docker://registry.blossomos.org/blos
 
 # Image Flavor
 image_flavor="main"
-if [[ "${IMAGE_NAME}" =~ nvidia-open ]]; then
+if [[ "${IMAGE_NAME}" =~ nvidia-legacy ]]; then
+  image_flavor="nvidia-legacy"
+elif [[ "${IMAGE_NAME}" =~ nvidia-open ]]; then
   image_flavor="nvidia-open"
 fi
 
@@ -35,6 +37,11 @@ cat >$IMAGE_INFO <<EOF
   "fedora-version": "$FEDORA_MAJOR_VERSION"
 }
 EOF
+
+# Boot Splash Message
+BOOTMSG_FILE="/usr/lib/blossomos/bootmsg-text"
+read -r BOOTMSG_TEXT <"$BOOTMSG_FILE"
+echo "${BOOTMSG_TEXT} (${PUBLISHED_TAG:-$UBLUE_IMAGE_TAG}; ${VERSION})" >"$BOOTMSG_FILE"
 
 # OS Release File
 sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
@@ -71,5 +78,11 @@ cat /usr/lib/os-release
 
 # Fix issues caused by ID no longer being fedora
 sed -i "s|^EFIDIR=.*|EFIDIR=\"fedora\"|" /usr/sbin/grub2-switch-to-blscfg
+
+# Resolved package manifest to gather information about installed packages outside of the image
+mkdir -p /usr/share/blossomos
+rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' \
+    | sort > /usr/share/blossomos/packages.lock
+echo "packages.lock: $(wc -l < /usr/share/blossomos/packages.lock) packages"
 
 echo "::endgroup::"

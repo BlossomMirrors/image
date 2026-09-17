@@ -1,0 +1,12 @@
+[Unit]
+Description=BlossomOS GRUB Defaults Migration
+After=local-fs.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-grub-migrate
+
+[Install]
+WantedBy=multi-user.target
