@@ -29,6 +29,7 @@ dnf5 -y install \
     blossom-plymouth-theme \
     blossom-kcm-software-update \
     blossom-kcm-help-support \
+    blossom-welcome \
     quick-appearance-kcm \
     dmemcg-booster \
     kcgroups-dmemcg \
