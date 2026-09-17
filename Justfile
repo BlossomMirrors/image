@@ -123,8 +123,12 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     fi
 
     # Fedora Version
+    # Keyed on CI_JOB_ID so concurrent build-* jobs on the same runner (see
+    # podman-ci-wrapper.sh) don't clobber each other's scratch files.
+    MANIFEST_JSON="/tmp/manifest-${CI_JOB_ID:-local}.json"
+    REPOTAGS_JSON="/tmp/repotags-${CI_JOB_ID:-local}.json"
     if [[ {{ ghcr }} == "0" ]]; then
-        rm -f /tmp/manifest.json
+        rm -f "${MANIFEST_JSON}"
     fi
     fedora_version=$({{ just }} fedora_version '{{ image }}' '{{ tag }}' '{{ flavor }}' '{{ kernel_pin }}')
 
@@ -155,10 +159,10 @@ build $image="blossomos" $tag="latest" $flavor="main" rechunk="0" ghcr="0" pipel
     else
         ver="${tag}-${fedora_version}.$(date +%Y%m%d)"
     fi
-    skopeo list-tags docker://{{ registry }}/blossomos/${image_name} > /tmp/repotags.json 2>/dev/null || echo '{"Tags":[]}' > /tmp/repotags.json
-    if [[ $(jq "any(.Tags[]; contains(\"$ver\"))" < /tmp/repotags.json) == "true" ]]; then
+    skopeo list-tags docker://{{ registry }}/blossomos/${image_name} > "${REPOTAGS_JSON}" 2>/dev/null || echo '{"Tags":[]}' > "${REPOTAGS_JSON}"
+    if [[ $(jq "any(.Tags[]; contains(\"$ver\"))" < "${REPOTAGS_JSON}") == "true" ]]; then
         POINT="1"
-        while $(jq -e "any(.Tags[]; contains(\"$ver.$POINT\"))" < /tmp/repotags.json)
+        while $(jq -e "any(.Tags[]; contains(\"$ver.$POINT\"))" < "${REPOTAGS_JSON}")
         do
             (( POINT++ ))
         done
@@ -652,7 +656,7 @@ generate-build-tags image="blossomos" tag="latest" flavor="main" kernel_pin="" g
     TODAY="$(date +%A)"
     WEEKLY="Tuesday"
     if [[ {{ ghcr }} == "0" ]]; then
-        rm -f /tmp/manifest.json
+        rm -f "/tmp/manifest-${CI_JOB_ID:-local}.json"
     fi
     FEDORA_VERSION="$({{ just }} fedora_version '{{ image }}' '{{ tag }}' '{{ flavor }}' '{{ kernel_pin }}')"
     DEFAULT_TAG=$({{ just }} generate-default-tag {{ tag }} {{ ghcr }})
