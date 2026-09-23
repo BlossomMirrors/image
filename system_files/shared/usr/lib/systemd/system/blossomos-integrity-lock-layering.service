@@ -1,6 +1,6 @@
 [Unit]
 Description=Lock rpm-ostree layering while BlossomOS integrity mode is on
-Documentation=https://dev.blossomos.org/blossom/os/core/image/-/blob/release/INTEGRITY.md
+Documentation=https://dev.blossomos.org/blossom/os/core/image/-/blob/release/docs/INTEGRITY.md
 ConditionKernelCommandLine=blossomos.integrity=1
 DefaultDependencies=no
 After=local-fs.target

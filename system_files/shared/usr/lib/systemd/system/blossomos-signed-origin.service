@@ -1,6 +1,6 @@
 [Unit]
 Description=Move BlossomOS onto a signature-verified image origin
-Documentation=https://dev.blossomos.org/blossom/os/core/image/-/blob/release/INTEGRITY.md
+Documentation=https://dev.blossomos.org/blossom/os/core/image/-/blob/release/docs/INTEGRITY.md
 Wants=network-online.target
 After=network-online.target rpm-ostreed-automatic.service
 ConditionPathExists=/run/ostree-booted
