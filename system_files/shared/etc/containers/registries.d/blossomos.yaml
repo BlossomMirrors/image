@@ -1,0 +1,6 @@
+# BlossomOS images carry cosign signatures as sha256-<digest>.sig tags next to
+# the image; this makes podman/skopeo/bootc look for them there. Enforcement
+# itself happens in /etc/containers/policy.json (see blossomos-integrity).
+docker:
+  registry.blossomos.org/blossom:
+    use-sigstore-attachments: true

@@ -1,0 +1,10 @@
+[Unit]
+Description=Move BlossomOS onto a signature-verified image origin
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

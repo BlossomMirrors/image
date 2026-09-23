@@ -64,6 +64,8 @@ Images are signed with cosign. Verify with the included public key, for example:
 cosign verify --key cosign.pub registry.blossomos.org/blossom/image:main
 ```
 
+Installed systems enforce these signatures for updates, and can prove what they booted to a remote verifier with the TPM; see [INTEGRITY.md](INTEGRITY.md).
+
 ## License
 
 [Apache 2.0](LICENSE)

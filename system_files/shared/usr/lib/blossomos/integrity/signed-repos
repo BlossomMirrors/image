@@ -1,0 +1,4 @@
+# Repositories whose images are signed with /usr/lib/blossomos/integrity/cosign.pub.
+# Read by /usr/bin/blossomos-integrity and the blossomos-integrity dracut module.
+registry.blossomos.org/blossom/image
+registry.blossomos.org/blossom/image-dev

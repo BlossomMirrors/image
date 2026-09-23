@@ -1,0 +1,39 @@
+# BlossomOS integrity mode IMA policy, loaded from the initramfs when booted
+# with blossomos.integrity=1 (see the blossomos-integrity dracut module).
+#
+# Measures (never appraises) every executable, executable mapping and kernel
+# module into PCR 10, wherever it lives - /usr, an unlocked /usr overlay,
+# /var/usrlocal, /tmp, ... A verifier compares the IMA log against the file
+# manifest published as the image's integrity attestation (see docs/INTEGRITY.md).
+#
+# Pseudo filesystems never hold executable code worth measuring:
+# proc
+dont_measure fsmagic=0x9fa0
+# sysfs
+dont_measure fsmagic=0x62656572
+# debugfs
+dont_measure fsmagic=0x64626720
+# devpts
+dont_measure fsmagic=0x1cd1
+# securityfs
+dont_measure fsmagic=0x73636673
+# selinuxfs
+dont_measure fsmagic=0xf97cff8c
+# cgroup, cgroup2
+dont_measure fsmagic=0x27e0eb
+dont_measure fsmagic=0x63677270
+# nsfs
+dont_measure fsmagic=0x6e736673
+# efivarfs
+dont_measure fsmagic=0xde5e81e4
+# bpf
+dont_measure fsmagic=0xcafe4a11
+measure func=BPRM_CHECK mask=MAY_EXEC
+measure func=MMAP_CHECK mask=MAY_EXEC
+measure func=MODULE_CHECK
+measure func=KEXEC_KERNEL_CHECK
+measure func=KEXEC_INITRAMFS_CHECK
+measure func=POLICY_CHECK
+# SELinux state and policy hash, so setenforce 0 or loading a policy module
+# shows up in the log too
+measure func=CRITICAL_DATA
