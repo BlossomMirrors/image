@@ -32,6 +32,7 @@ systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
+systemctl enable cups-browsed.service
 
 # dmem cgroup VRAM prioritization for foreground apps (games). No-op without
 # a kernel that supports the dmem cgroup controller, see kernel-blossomos'
