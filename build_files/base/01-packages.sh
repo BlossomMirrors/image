@@ -218,6 +218,9 @@ EXCLUDED_PACKAGES=(
     firefox
     firefox-langpacks
     firewall-config
+    firewalld
+    python3-firewall
+    plasma-firewall-firewalld
     google-noto-sans-cjk-vf-fonts
     kcharselect
     khelpcenter
@@ -275,7 +278,7 @@ rm -rf /usr/share/plasma/look-and-feel/org.fedoraproject.fedora.desktop/
 #    dnf5 upgrade --refresh --advisory=FEDORA-2024-dd2e9fb225
 #fi
 
-dnf -y install plasma-firewall
+dnf -y install --setopt=install_weak_deps=False plasma-firewall plasma-firewall-ufw
 
 # Install DX specific packages
 if [[ "${IMAGE_FLAVOR}" == "dx" ]]; then

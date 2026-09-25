@@ -1,0 +1,98 @@
+*filter
+:ufw-user-input - [0:0]
+:ufw-user-output - [0:0]
+:ufw-user-forward - [0:0]
+:ufw-before-logging-input - [0:0]
+:ufw-before-logging-output - [0:0]
+:ufw-before-logging-forward - [0:0]
+:ufw-user-logging-input - [0:0]
+:ufw-user-logging-output - [0:0]
+:ufw-user-logging-forward - [0:0]
+:ufw-after-logging-input - [0:0]
+:ufw-after-logging-output - [0:0]
+:ufw-after-logging-forward - [0:0]
+:ufw-logging-deny - [0:0]
+:ufw-logging-allow - [0:0]
+:ufw-user-limit - [0:0]
+:ufw-user-limit-accept - [0:0]
+### RULES ###
+
+### tuple ### allow udp 5353 224.0.0.251 any 0.0.0.0/0 mDNS - in
+-A ufw-user-input -p udp -d 224.0.0.251 --dport 5353 -j ACCEPT -m comment --comment 'dapp_mDNS'
+
+### tuple ### allow udp 5353 0.0.0.0/0 any 0.0.0.0/0 in comment=6d444e53
+-A ufw-user-input -p udp --dport 5353 -j ACCEPT
+
+### tuple ### allow udp 137,138 0.0.0.0/0 any 0.0.0.0/0 in comment=53616d6261
+-A ufw-user-input -p udp -m multiport --dports 137,138 -j ACCEPT
+
+### tuple ### allow tcp 139,445 0.0.0.0/0 any 0.0.0.0/0 in comment=53616d6261
+-A ufw-user-input -p tcp -m multiport --dports 139,445 -j ACCEPT
+
+### tuple ### allow tcp 1714:1764 0.0.0.0/0 any 0.0.0.0/0 in comment=4b444520436f6e6e656374
+-A ufw-user-input -p tcp -m multiport --dports 1714:1764 -j ACCEPT
+
+### tuple ### allow udp 1714:1764 0.0.0.0/0 any 0.0.0.0/0 in comment=4b444520436f6e6e656374
+-A ufw-user-input -p udp -m multiport --dports 1714:1764 -j ACCEPT
+
+### tuple ### allow tcp 47984,47989,47990,48010 0.0.0.0/0 any 0.0.0.0/0 in comment=53756e7368696e65
+-A ufw-user-input -p tcp -m multiport --dports 47984,47989,47990,48010 -j ACCEPT
+
+### tuple ### allow udp 47998:48000 0.0.0.0/0 any 0.0.0.0/0 in comment=53756e7368696e65
+-A ufw-user-input -p udp -m multiport --dports 47998:48000 -j ACCEPT
+
+### tuple ### allow udp 48002,48010 0.0.0.0/0 any 0.0.0.0/0 in comment=53756e7368696e65
+-A ufw-user-input -p udp -m multiport --dports 48002,48010 -j ACCEPT
+
+### tuple ### allow udp 53,67 0.0.0.0/0 any 0.0.0.0/0 in_waydroid0 comment=57617964726f6964
+-A ufw-user-input -i waydroid0 -p udp -m multiport --dports 53,67 -j ACCEPT
+
+### tuple ### allow tcp 53,67 0.0.0.0/0 any 0.0.0.0/0 in_waydroid0 comment=57617964726f6964
+-A ufw-user-input -i waydroid0 -p tcp -m multiport --dports 53,67 -j ACCEPT
+
+### tuple ### route:allow any any 0.0.0.0/0 any 0.0.0.0/0 in_waydroid0 comment=57617964726f6964
+-A ufw-user-forward -i waydroid0 -j ACCEPT
+
+### tuple ### route:allow any any 0.0.0.0/0 any 0.0.0.0/0 out_waydroid0 comment=57617964726f6964
+-A ufw-user-forward -o waydroid0 -j ACCEPT
+
+### tuple ### allow udp 53,67,547 0.0.0.0/0 any 0.0.0.0/0 in_virbr0 comment=6c696276697274
+-A ufw-user-input -i virbr0 -p udp -m multiport --dports 53,67,547 -j ACCEPT
+
+### tuple ### allow tcp 53 0.0.0.0/0 any 0.0.0.0/0 in_virbr0 comment=6c696276697274
+-A ufw-user-input -i virbr0 -p tcp --dport 53 -j ACCEPT
+
+### tuple ### route:allow any any 0.0.0.0/0 any 0.0.0.0/0 in_virbr0 comment=6c696276697274
+-A ufw-user-forward -i virbr0 -j ACCEPT
+
+### tuple ### route:allow any any 0.0.0.0/0 any 0.0.0.0/0 out_virbr0 comment=6c696276697274
+-A ufw-user-forward -o virbr0 -j ACCEPT
+
+### tuple ### allow udp 53,67,547 0.0.0.0/0 any 0.0.0.0/0 in_incusbr0 comment=496e637573
+-A ufw-user-input -i incusbr0 -p udp -m multiport --dports 53,67,547 -j ACCEPT
+
+### tuple ### allow tcp 53 0.0.0.0/0 any 0.0.0.0/0 in_incusbr0 comment=496e637573
+-A ufw-user-input -i incusbr0 -p tcp --dport 53 -j ACCEPT
+
+### tuple ### route:allow any any 0.0.0.0/0 any 0.0.0.0/0 in_incusbr0 comment=496e637573
+-A ufw-user-forward -i incusbr0 -j ACCEPT
+
+### tuple ### route:allow any any 0.0.0.0/0 any 0.0.0.0/0 out_incusbr0 comment=496e637573
+-A ufw-user-forward -o incusbr0 -j ACCEPT
+
+### END RULES ###
+
+### LOGGING ###
+-A ufw-after-logging-input -j LOG --log-prefix "[UFW BLOCK] " -m limit --limit 3/min --limit-burst 10
+-A ufw-after-logging-forward -j LOG --log-prefix "[UFW BLOCK] " -m limit --limit 3/min --limit-burst 10
+-I ufw-logging-deny -m conntrack --ctstate INVALID -j RETURN -m limit --limit 3/min --limit-burst 10
+-A ufw-logging-deny -j LOG --log-prefix "[UFW BLOCK] " -m limit --limit 3/min --limit-burst 10
+-A ufw-logging-allow -j LOG --log-prefix "[UFW ALLOW] " -m limit --limit 3/min --limit-burst 10
+### END LOGGING ###
+
+### RATE LIMITING ###
+-A ufw-user-limit -m limit --limit 3/minute -j LOG --log-prefix "[UFW LIMIT BLOCK] "
+-A ufw-user-limit -j REJECT
+-A ufw-user-limit-accept -j ACCEPT
+### END RATE LIMITING ###
+COMMIT

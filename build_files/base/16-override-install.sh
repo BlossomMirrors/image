@@ -62,7 +62,6 @@ glib-compile-schemas /usr/share/glib-2.0/schemas &>/dev/null
 # Make Samba usershares work OOTB
 mkdir -p /var/lib/samba/usershares
 chown -R root:usershares /var/lib/samba/usershares
-firewall-offline-cmd --service=samba --service=samba-client
 if selinuxenabled 2>/dev/null; then
     setsebool -P samba_enable_home_dirs=1
     setsebool -P samba_export_all_ro=1
