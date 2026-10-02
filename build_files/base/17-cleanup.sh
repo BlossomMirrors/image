@@ -21,6 +21,9 @@ systemctl disable mullvad-early-boot-blocking.service
 # OOM killer remains as the last resort.
 systemctl disable systemd-oomd.service
 systemctl disable systemd-oomd.socket
+# Speed up systemd startup by disabling NetworkManager-wait-online.service
+systemctl disable NetworkManager-wait-online.service
+# Enable all other neccesary services
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-grub-migrate.service
