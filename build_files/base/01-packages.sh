@@ -164,6 +164,11 @@ sed -i \
 # The setuid bit lets split tunneling work for unprivileged users.
 chmod u+s /usr/bin/mullvad-exclude
 
+# Remove foot .desktop files
+rm -f /usr/share/applications/foot-server.desktop
+rm -f /usr/share/applications/foot.desktop
+rm -f /usr/share/applications/footclient.desktop
+
 # Install COPR packages using isolated enablement (secure)
 echo "Installing COPR packages with isolated repo enablement..."
 
