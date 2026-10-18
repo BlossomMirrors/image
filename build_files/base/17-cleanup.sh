@@ -55,10 +55,6 @@ systemctl enable flatpak-nuke-fedora.service
 # installed systems stuck trusting a stale key
 systemctl enable blossomos-flatpak-key-refresh.timer
 
-# Report this machine to the BlossomOS licensing service at boot and hourly
-# thereafter, activating it on first contact
-systemctl enable blossomos-activation.timer
-
 # Nothing on this image otherwise runs `flatpak preinstall`, so
 # packages.flatpak's preinstall.d entries would never reach machines that
 # were already provisioned before an entry was added
