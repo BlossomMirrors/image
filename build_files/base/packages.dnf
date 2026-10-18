@@ -217,3 +217,11 @@ kaccounts-providers
 merkuro
 kdepim-runtime
 akonadi-search
+
+# Fonts for CJK and others
+vlgothic-fonts
+wqy-microhei-fonts
+naver-nanum-gothic-fonts
+google-noto-sans-kannada-fonts
+google-noto-sans-bamum-fonts
+unifont-fonts

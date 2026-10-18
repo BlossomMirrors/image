@@ -21,6 +21,7 @@ dnf5 -y install \
     --enablerepo="${REPO_ID}" \
     blossomos-branding \
     blossom-arc \
+    google-noto-emoji-fonts-3d \
     blossomos-webapps \
     blossomos-skel \
     blossomui \
