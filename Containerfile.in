@@ -69,7 +69,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     /ctx/build_files/shared/build.sh && \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
-    /ctx/build_files/base/03-fetch.sh
+    /ctx/build_files/base/03-fetch.sh && \
+    /ctx/build_files/shared/sign-kmods.sh
 #endif
 
 # /* blossomos:stable with zfs no nvidia */
@@ -88,7 +89,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
     /ctx/build_files/base/zfs.sh && \
-    /ctx/build_files/base/03-fetch.sh
+    /ctx/build_files/base/03-fetch.sh && \
+    /ctx/build_files/shared/sign-kmods.sh
 #endif
 
 # /* blossomos-nvidia-open:latest no zfs */
@@ -107,7 +109,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
     /ctx/build_files/base/03-fetch.sh && \
-    /ctx/build_files/base/04-nvidia.sh
+    /ctx/build_files/base/04-nvidia.sh && \
+    /ctx/build_files/shared/sign-kmods.sh
 #endif
 
 # /* blossomos-nvidia-open:stable with ZFS */
@@ -128,7 +131,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
     /ctx/build_files/base/03-fetch.sh && \
     /ctx/build_files/base/04-nvidia.sh && \
-    /ctx/build_files/base/zfs.sh
+    /ctx/build_files/base/zfs.sh && \
+    /ctx/build_files/shared/sign-kmods.sh
 #endif
 
 # /* blossomos-nvidia-legacy:latest no zfs, Maxwell/Pascal/Volta proprietary driver */
@@ -147,7 +151,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     /ctx/build_files/base/01-packages.sh && \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
     /ctx/build_files/base/03-fetch.sh && \
-    /ctx/build_files/base/04-nvidia-legacy.sh
+    /ctx/build_files/base/04-nvidia-legacy.sh && \
+    /ctx/build_files/shared/sign-kmods.sh
 #endif
 
 # /* blossomos-nvidia-legacy:stable with ZFS */
@@ -168,7 +173,8 @@ RUN --mount=type=tmpfs,dst=/boot \
     /ctx/build_files/base/02-install-common-kernel-akmods.sh && \
     /ctx/build_files/base/03-fetch.sh && \
     /ctx/build_files/base/04-nvidia-legacy.sh && \
-    /ctx/build_files/base/zfs.sh
+    /ctx/build_files/base/zfs.sh && \
+    /ctx/build_files/shared/sign-kmods.sh
 #endif
 
 # /* BlossomOS RPM packages and Flatpak remote */

@@ -21,6 +21,9 @@ systemctl disable mullvad-early-boot-blocking.service
 # OOM killer remains as the last resort.
 systemctl disable systemd-oomd.service
 systemctl disable systemd-oomd.socket
+# Speed up systemd startup by disabling NetworkManager-wait-online.service
+systemctl disable NetworkManager-wait-online.service
+# Enable all other neccesary services
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-grub-migrate.service
@@ -32,6 +35,7 @@ systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
 systemctl enable input-remapper.service
+systemctl enable cups-browsed.service
 
 # dmem cgroup VRAM prioritization for foreground apps (games). No-op without
 # a kernel that supports the dmem cgroup controller, see kernel-blossomos'
@@ -45,10 +49,6 @@ systemctl --global enable kairpodsd.service
 
 # Nuke possible Fedora flatpak repos
 systemctl enable flatpak-nuke-fedora.service
-
-# Report this machine to the BlossomOS licensing service at boot and hourly
-# thereafter, activating it on first contact
-systemctl enable blossomos-activation.timer
 
 # Nothing on this image otherwise runs `flatpak preinstall`, so
 # packages.flatpak's preinstall.d entries would never reach machines that
