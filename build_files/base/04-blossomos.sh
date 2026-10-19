@@ -67,6 +67,12 @@ dnf5 download --destdir=/tmp/blossom-kaccounts-providers --disablerepo='*' --ena
 dnf5 install -y /tmp/blossom-kaccounts-providers/*.rpm
 rm -rf /tmp/blossom-kaccounts-providers
 
+# Replace stock xdg-desktop-portal with our BlossomOS-patched build, so files opened from sandboxed apps (e.g. Helium) reach flatpaks with sub id desktop files like org.libreoffice.LibreOffice.writer
+mkdir -p /tmp/blossom-xdg-desktop-portal
+dnf5 download --destdir=/tmp/blossom-xdg-desktop-portal --disablerepo='*' --enablerepo="${REPO_ID}" xdg-desktop-portal
+dnf5 install -y /tmp/blossom-xdg-desktop-portal/*.rpm
+rm -rf /tmp/blossom-xdg-desktop-portal
+
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
