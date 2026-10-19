@@ -1,0 +1,139 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+IMAGE_INFO="/usr/share/ublue-os/image-info.json"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/blossomos"
+DISMISS_FILE="$STATE_DIR/gpu-check-dismissed"
+LANG_DIR="/usr/libexec/blossomos/lang"
+TITLE="BlossomOS"
+
+command -v kdialog &>/dev/null || exit 0
+[[ -r "$IMAGE_INFO" ]] || exit 0
+
+locale="${LANGUAGE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}}}"
+locale="${locale%%:*}"
+locale="${locale%%[_.@]*}"
+LANG_FILE="$LANG_DIR/$locale.json"
+[[ -r "$LANG_FILE" ]] || LANG_FILE="$LANG_DIR/en.json"
+
+t() {
+    local key=$1
+    shift
+    jq -nr --arg k "$key" \
+        --slurpfile l "$LANG_FILE" --slurpfile f "$LANG_DIR/en.json" '
+        ($k | split(".")) as $p
+        | ($l[0] | getpath($p)) // ($f[0] | getpath($p)) // $k
+        | reduce ($ARGS.positional[] | capture("^(?<n>[^=]+)=(?<v>.*)$"; "s")) as $a
+            (.; split("{" + $a.n + "}") | join($a.v))' --args "$@"
+}
+
+detect_variant() {
+    local dev class vendor device has_open=0 has_legacy=0
+    for dev in /sys/bus/pci/devices/*; do
+        read -r class <"$dev/class"
+        [[ "$class" == 0x03* ]] || continue
+        read -r vendor <"$dev/vendor"
+        [[ "$vendor" == 0x10de ]] || continue
+        read -r device <"$dev/device"
+        if (( device >= 0x1e00 )); then
+            has_open=1
+        elif (( device >= 0x1340 )); then
+            has_legacy=1
+        fi
+    done
+    if (( has_legacy )); then
+        echo nvidia-legacy
+    elif (( has_open )); then
+        echo nvidia
+    else
+        echo generic
+    fi
+}
+
+current_variant() {
+    case "$(jq -r '."image-flavor"' "$IMAGE_INFO")" in
+    nvidia-open) echo nvidia ;;
+    nvidia-legacy) echo nvidia-legacy ;;
+    *) echo generic ;;
+    esac
+}
+
+variant_label() {
+    t "gpu-check.variant.$1"
+}
+
+wanted=$(detect_variant)
+current=$(current_variant)
+[[ "$wanted" == "$current" ]] && exit 0
+
+if [[ -r "$DISMISS_FILE" && "$(<"$DISMISS_FILE")" == "$current:$wanted" ]]; then
+    exit 0
+fi
+
+status=$(rpm-ostree status --json)
+booted_ref=$(jq -r '.deployments[] | select(.booted) | ."container-image-reference" // empty' <<<"$status")
+[[ -n "$booted_ref" ]] || exit 0
+
+repo="${booted_ref%:*}"
+tag="${booted_ref##*:}"
+dx=""
+if [[ "$tag" == *-dx ]]; then
+    dx="-dx"
+    tag="${tag%-dx}"
+fi
+tag="${tag%-nvidia-legacy}"
+tag="${tag%-nvidia}"
+case "$wanted" in
+nvidia) suffix="-nvidia" ;;
+nvidia-legacy) suffix="-nvidia-legacy" ;;
+*) suffix="" ;;
+esac
+target_ref="${repo}:${tag}${suffix}${dx}"
+
+pending_ref=$(jq -r '.deployments[0]."container-image-reference" // empty' <<<"$status")
+[[ "$pending_ref" == "$target_ref" ]] && exit 0
+
+current_label=$(variant_label "$current")
+wanted_label=$(variant_label "$wanted")
+reason=$(t "gpu-check.reason.$wanted" current="$current_label")
+
+rc=0
+kdialog --title "$TITLE" \
+    --yes-label "$(t gpu-check.switch wanted="$wanted_label")" \
+    --no-label "$(t gpu-check.not-now)" \
+    --cancel-label "$(t gpu-check.dont-ask)" \
+    --warningyesnocancel "$reason
+
+$(t gpu-check.recommend wanted="$wanted_label")" || rc=$?
+
+case "$rc" in
+0) ;;
+2)
+    mkdir -p "$STATE_DIR"
+    echo "$current:$wanted" >"$DISMISS_FILE"
+    exit 0
+    ;;
+*) exit 0 ;;
+esac
+
+progress=$(kdialog --title "$TITLE" --progressbar "$(t gpu-check.progress wanted="$wanted_label")" 0)
+read -r prog_service prog_path <<<"$progress"
+close_progress() {
+    gdbus call --session --dest "$prog_service" --object-path "$prog_path" \
+        --method org.kde.kdialog.ProgressDialog.close &>/dev/null || true
+}
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+if rpm-ostree rebase "$target_ref" &>"$log"; then
+    close_progress
+    if kdialog --title "$TITLE" --yes-label "$(t gpu-check.reboot-now)" --no-label "$(t gpu-check.later)" \
+        --yesno "$(t gpu-check.installed wanted="$wanted_label")"; then
+        systemctl reboot
+    fi
+else
+    close_progress
+    kdialog --title "$TITLE" --error "$(t gpu-check.failed wanted="$wanted_label")
+
+$(tail -n 20 "$log")"
+fi

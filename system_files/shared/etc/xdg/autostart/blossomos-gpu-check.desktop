@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BlossomOS GPU Check
+Name[de]=BlossomOS GPU-Prüfung
+Comment=Warn when the installed image doesn't match this machine's GPU
+Comment[de]=Warnen, wenn das installierte Image nicht zur Grafikkarte dieses Rechners passt
+Exec=/usr/libexec/blossomos/gpu-check
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2
