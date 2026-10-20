@@ -1,0 +1,13 @@
+[Unit]
+Description=BlossomOS Firewall Migration to ufw
+After=local-fs.target
+Before=ufw.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-firewall-migrate
+
+[Install]
+WantedBy=basic.target

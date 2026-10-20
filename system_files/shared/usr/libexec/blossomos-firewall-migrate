@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -oue pipefail
+
+version_stamp="/etc/blossomos-firewall-migrate.version"
+
+if [[ -f "$version_stamp" ]]; then
+    exit 0
+fi
+
+install -Dm0640 /usr/share/blossomos/ufw/user.rules /var/lib/ufw/user.rules
+install -Dm0640 /usr/share/blossomos/ufw/user6.rules /var/lib/ufw/user6.rules
+
+if grep -q "^ENABLED=" /etc/ufw/ufw.conf; then
+    sed -i "s|^ENABLED=.*|ENABLED=yes|" /etc/ufw/ufw.conf
+else
+    echo "ENABLED=yes" >>/etc/ufw/ufw.conf
+fi
+
+echo 1 >"$version_stamp"

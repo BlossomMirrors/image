@@ -27,6 +27,8 @@ systemctl disable NetworkManager-wait-online.service
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
 systemctl enable blossomos-grub-migrate.service
+systemctl enable blossomos-firewall-migrate.service
+systemctl enable ufw.service
 systemctl enable blossomos-snapper-setup.service
 systemctl enable snapper-timeline.timer
 systemctl enable snapper-cleanup.timer
