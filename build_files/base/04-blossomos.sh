@@ -30,6 +30,7 @@ dnf5 -y install \
     blossom-plymouth-theme \
     blossom-kcm-software-update \
     blossom-kcm-help-support \
+    blossom-recovery \
     blossom-p2pupdated \
     blossom-welcome \
     quick-appearance-kcm \
@@ -72,6 +73,13 @@ mkdir -p /tmp/blossom-xdg-desktop-portal
 dnf5 download --destdir=/tmp/blossom-xdg-desktop-portal --disablerepo='*' --enablerepo="${REPO_ID}" xdg-desktop-portal
 dnf5 install -y /tmp/blossom-xdg-desktop-portal/*.rpm
 rm -rf /tmp/blossom-xdg-desktop-portal
+
+# Overlay our BlossomOS-patched Session KCM on the stock plasma-desktop, so it can pick BlossomOS Recovery for the next restart (with blossom-recovery's units and polkit rule).
+# Its files are also owned by plasma-desktop and dnf5 has no --replacefiles flag, so install via rpm directly
+mkdir -p /tmp/blossom-kcm-smserver
+dnf5 download --destdir=/tmp/blossom-kcm-smserver --disablerepo='*' --enablerepo="${REPO_ID}" kcm_smserver-blossomos
+rpm -i --replacefiles /tmp/blossom-kcm-smserver/*.rpm
+rm -rf /tmp/blossom-kcm-smserver
 
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo

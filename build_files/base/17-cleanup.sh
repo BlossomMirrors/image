@@ -30,6 +30,9 @@ systemctl enable blossomos-grub-migrate.service
 systemctl enable blossomos-firewall-migrate.service
 systemctl enable ufw.service
 systemctl enable blossomos-snapper-setup.service
+systemctl enable blossomos-recovery-sync.service
+systemctl enable blossomos-recovery-sync.path
+systemctl enable blossomos-recovery-boot-ok.service
 systemctl enable snapper-timeline.timer
 systemctl enable snapper-cleanup.timer
 systemctl enable blossomos-bootmsg.service
