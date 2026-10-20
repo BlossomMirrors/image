@@ -1,0 +1,26 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+# Runs as root via pkexec, progress events go to stdout as JSON lines
+[[ $# -eq 1 ]] || { echo "usage: gpu-switch IMAGE" >&2; exit 2; }
+target=$1
+
+image_ref() {
+    case "$1" in
+    ostree-unverified-registry:*) echo "${1#ostree-unverified-registry:}" ;;
+    *docker://*) echo "${1#*docker://}" ;;
+    *) echo "$1" ;;
+    esac
+}
+
+booted=$(rpm-ostree status --json | jq -r '.deployments[] | select(.booted) | ."container-image-reference" // empty')
+[[ -n "$booted" ]] || { echo "No booted container image found" >&2; exit 1; }
+booted=$(image_ref "$booted")
+
+# Only allow switching between variants of the booted image
+if [[ "${target%:*}" != "${booted%:*}" || ! "${target##*:}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    echo "Refusing to switch to $target" >&2
+    exit 1
+fi
+
+exec bootc switch --progress-fd 3 "$target" 3>&1 1>&2

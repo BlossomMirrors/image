@@ -1,0 +1,23 @@
+{
+  "gpu-check": {
+    "variant": {
+      "nvidia": "NVIDIA",
+      "nvidia-legacy": "NVIDIA Legacy",
+      "generic": "Generic"
+    },
+    "reason": {
+      "nvidia": "An NVIDIA GPU (Turing or newer) was detected, but you are running the {current} image.",
+      "nvidia-legacy": "An older NVIDIA GPU (Maxwell, Pascal or Volta) was detected, but you are running the {current} image.",
+      "generic": "No supported NVIDIA GPU was detected, but you are running the {current} image."
+    },
+    "recommend": "Switching to the {wanted} image is recommended for full graphics support. The download runs in the background and takes effect after a reboot.",
+    "switch": "Switch to {wanted}",
+    "not-now": "Not now",
+    "dont-ask": "Don't ask again",
+    "progress": "Switching to the {wanted} image…",
+    "installed": "The {wanted} image has been installed. Reboot now to start using it?",
+    "reboot-now": "Reboot now",
+    "later": "Later",
+    "failed": "Switching to the {wanted} image failed:"
+  }
+}

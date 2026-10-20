@@ -1,0 +1,191 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+IMAGE_INFO="/usr/share/ublue-os/image-info.json"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/blossomos"
+DISMISS_FILE="$STATE_DIR/gpu-check-dismissed"
+LANG_DIR="/usr/libexec/blossomos/lang"
+TITLE="BlossomOS"
+
+command -v kdialog &>/dev/null || exit 0
+[[ -r "$IMAGE_INFO" ]] || exit 0
+
+locale="${LANGUAGE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}}}"
+locale="${locale%%:*}"
+locale="${locale%%[_.@]*}"
+LANG_FILE="$LANG_DIR/$locale.json"
+[[ -r "$LANG_FILE" ]] || LANG_FILE="$LANG_DIR/en.json"
+
+t() {
+    local key=$1
+    shift
+    jq -nr --arg k "$key" \
+        --slurpfile l "$LANG_FILE" --slurpfile f "$LANG_DIR/en.json" '
+        ($k | split(".")) as $p
+        | ($l[0] | getpath($p)) // ($f[0] | getpath($p)) // $k
+        | reduce ($ARGS.positional[] | capture("^(?<n>[^=]+)=(?<v>.*)$"; "s")) as $a
+            (.; split("{" + $a.n + "}") | join($a.v))' --args "$@"
+}
+
+# Maxwell, Pascal and Volta device IDs, everything else uses the open driver
+declare -A LEGACY_NVIDIA=(
+        ["1340"]=1 ["1341"]=1 ["1344"]=1 ["1346"]=1 ["1347"]=1 ["1348"]=1
+        ["1349"]=1 ["134b"]=1 ["134d"]=1 ["134e"]=1 ["134f"]=1 ["137a"]=1
+        ["137b"]=1 ["137d"]=1 ["1380"]=1 ["1381"]=1 ["1382"]=1 ["1389"]=1
+        ["1390"]=1 ["1391"]=1 ["1392"]=1 ["1393"]=1 ["1398"]=1 ["1399"]=1
+        ["139a"]=1 ["139b"]=1 ["139c"]=1 ["139d"]=1 ["13ad"]=1 ["13ae"]=1
+        ["13b0"]=1 ["13b1"]=1 ["13b2"]=1 ["13b3"]=1 ["13b4"]=1 ["13b6"]=1
+        ["13b9"]=1 ["13ba"]=1 ["13bb"]=1 ["13bc"]=1 ["13bd"]=1 ["13be"]=1
+        ["13bf"]=1 ["13c0"]=1 ["13c1"]=1 ["13c2"]=1 ["13c3"]=1 ["13c4"]=1
+        ["13d7"]=1 ["13d8"]=1 ["13d9"]=1 ["13da"]=1 ["13e4"]=1 ["13e7"]=1
+        ["13f0"]=1 ["13f1"]=1 ["13f2"]=1 ["13f3"]=1 ["13f8"]=1 ["13f9"]=1
+        ["13fa"]=1 ["13fb"]=1 ["1401"]=1 ["1402"]=1 ["1404"]=1 ["1406"]=1
+        ["1407"]=1 ["1427"]=1 ["1430"]=1 ["1431"]=1 ["1436"]=1 ["15c2"]=1
+        ["15f0"]=1 ["15f1"]=1 ["15f7"]=1 ["15f8"]=1 ["15f9"]=1 ["15fa"]=1
+        ["15fb"]=1 ["15fc"]=1 ["15ff"]=1 ["1613"]=1 ["1617"]=1 ["1618"]=1
+        ["1619"]=1 ["161a"]=1 ["1667"]=1 ["1676"]=1 ["1725"]=1 ["172e"]=1
+        ["172f"]=1 ["174d"]=1 ["174e"]=1 ["1789"]=1 ["179c"]=1 ["17c2"]=1
+        ["17c8"]=1 ["17f0"]=1 ["17f1"]=1 ["17fd"]=1 ["1b00"]=1 ["1b01"]=1
+        ["1b02"]=1 ["1b04"]=1 ["1b06"]=1 ["1b07"]=1 ["1b30"]=1 ["1b38"]=1
+        ["1b39"]=1 ["1b70"]=1 ["1b78"]=1 ["1b80"]=1 ["1b81"]=1 ["1b82"]=1
+        ["1b83"]=1 ["1b84"]=1 ["1b87"]=1 ["1ba0"]=1 ["1ba1"]=1 ["1ba2"]=1
+        ["1ba9"]=1 ["1baa"]=1 ["1bad"]=1 ["1bb0"]=1 ["1bb1"]=1 ["1bb3"]=1
+        ["1bb4"]=1 ["1bb5"]=1 ["1bb6"]=1 ["1bb7"]=1 ["1bb8"]=1 ["1bb9"]=1
+        ["1bbb"]=1 ["1bc7"]=1 ["1be0"]=1 ["1be1"]=1 ["1c00"]=1 ["1c01"]=1
+        ["1c02"]=1 ["1c03"]=1 ["1c04"]=1 ["1c06"]=1 ["1c07"]=1 ["1c09"]=1
+        ["1c20"]=1 ["1c21"]=1 ["1c22"]=1 ["1c23"]=1 ["1c2d"]=1 ["1c30"]=1
+        ["1c31"]=1 ["1c35"]=1 ["1c36"]=1 ["1c60"]=1 ["1c61"]=1 ["1c62"]=1
+        ["1c70"]=1 ["1c81"]=1 ["1c82"]=1 ["1c83"]=1 ["1c8c"]=1 ["1c8d"]=1
+        ["1c8e"]=1 ["1c8f"]=1 ["1c90"]=1 ["1c91"]=1 ["1c92"]=1 ["1c94"]=1
+        ["1c96"]=1 ["1ca7"]=1 ["1ca8"]=1 ["1caa"]=1 ["1cb1"]=1 ["1cb2"]=1
+        ["1cb3"]=1 ["1cb6"]=1 ["1cba"]=1 ["1cbb"]=1 ["1cbc"]=1 ["1cbd"]=1
+        ["1ccc"]=1 ["1ccd"]=1 ["1cfa"]=1 ["1cfb"]=1 ["1d01"]=1 ["1d02"]=1
+        ["1d10"]=1 ["1d11"]=1 ["1d12"]=1 ["1d13"]=1 ["1d16"]=1 ["1d33"]=1
+        ["1d34"]=1 ["1d52"]=1 ["1d56"]=1 ["1d81"]=1 ["1d83"]=1 ["1d84"]=1
+        ["1db0"]=1 ["1db1"]=1 ["1db2"]=1 ["1db3"]=1 ["1db4"]=1 ["1db5"]=1
+        ["1db6"]=1 ["1db7"]=1 ["1db8"]=1 ["1dba"]=1 ["1dbd"]=1 ["1dbe"]=1
+        ["1dc1"]=1 ["1df0"]=1 ["1df2"]=1 ["1df4"]=1 ["1df5"]=1 ["1df6"]=1
+)
+
+detect_variant() {
+    local dev class vendor device variant=generic
+    for dev in /sys/bus/pci/devices/*; do
+        read -r class <"$dev/class"
+        [[ "$class" == 0x03* ]] || continue
+        read -r vendor <"$dev/vendor"
+        [[ "$vendor" == 0x10de ]] || continue
+        read -r device <"$dev/device"
+        device="${device#0x}"
+        if [[ -n "${LEGACY_NVIDIA[${device,,}]:-}" ]]; then
+            echo nvidia-legacy
+            return
+        fi
+        variant=nvidia
+    done
+    echo "$variant"
+}
+
+current_variant() {
+    case "$(jq -r '."image-flavor"' "$IMAGE_INFO")" in
+    nvidia-open) echo nvidia ;;
+    nvidia-legacy) echo nvidia-legacy ;;
+    *) echo generic ;;
+    esac
+}
+
+image_ref() {
+    case "$1" in
+    ostree-unverified-registry:*) echo "${1#ostree-unverified-registry:}" ;;
+    *docker://*) echo "${1#*docker://}" ;;
+    *) echo "$1" ;;
+    esac
+}
+
+variant_label() {
+    t "gpu-check.variant.$1"
+}
+
+wanted=$(detect_variant)
+current=$(current_variant)
+[[ "$wanted" == "$current" ]] && exit 0
+
+if [[ -r "$DISMISS_FILE" && "$(<"$DISMISS_FILE")" == "$current:$wanted" ]]; then
+    exit 0
+fi
+
+status=$(rpm-ostree status --json)
+booted_ref=$(jq -r '.deployments[] | select(.booted) | ."container-image-reference" // empty' <<<"$status")
+[[ -n "$booted_ref" ]] || exit 0
+booted_ref=$(image_ref "$booted_ref")
+
+repo="${booted_ref%:*}"
+tag="${booted_ref##*:}"
+dx=""
+if [[ "$tag" == *-dx ]]; then
+    dx="-dx"
+    tag="${tag%-dx}"
+fi
+tag="${tag%-nvidia-legacy}"
+tag="${tag%-nvidia}"
+case "$wanted" in
+nvidia) suffix="-nvidia" ;;
+nvidia-legacy) suffix="-nvidia-legacy" ;;
+*) suffix="" ;;
+esac
+target_ref="${repo}:${tag}${suffix}${dx}"
+
+pending_ref=$(image_ref "$(jq -r '.deployments[0]."container-image-reference" // empty' <<<"$status")")
+[[ "$pending_ref" == "$target_ref" ]] && exit 0
+
+current_label=$(variant_label "$current")
+wanted_label=$(variant_label "$wanted")
+reason=$(t "gpu-check.reason.$wanted" current="$current_label")
+
+rc=0
+kdialog --title "$TITLE" \
+    --yes-label "$(t gpu-check.switch wanted="$wanted_label")" \
+    --no-label "$(t gpu-check.not-now)" \
+    --cancel-label "$(t gpu-check.dont-ask)" \
+    --warningyesnocancel "$reason
+
+$(t gpu-check.recommend wanted="$wanted_label")" || rc=$?
+
+case "$rc" in
+0) ;;
+2)
+    mkdir -p "$STATE_DIR"
+    echo "$current:$wanted" >"$DISMISS_FILE"
+    exit 0
+    ;;
+*) exit 0 ;;
+esac
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+
+rc=0
+{
+    pkexec /usr/libexec/blossomos/gpu-switch "$target_ref" 2>"$log" || rc=$?
+    case "$rc" in
+    # 126 and 127 mean authentication was dismissed
+    0 | 126 | 127) message="" ;;
+    *) message=$(t gpu-check.failed wanted="$wanted_label") ;;
+    esac
+    jq -nc --arg m "$message" '{type: "Terminate", message: $m}'
+    exit "$rc"
+} | /usr/libexec/blossomos/jobview "$TITLE" "$(t gpu-check.progress wanted="$wanted_label")" || rc=$?
+
+case "$rc" in
+0)
+    if kdialog --title "$TITLE" --yes-label "$(t gpu-check.reboot-now)" --no-label "$(t gpu-check.later)" \
+        --yesno "$(t gpu-check.installed wanted="$wanted_label")"; then
+        systemctl reboot
+    fi
+    ;;
+126 | 127) ;;
+*)
+    kdialog --title "$TITLE" --error "$(t gpu-check.failed wanted="$wanted_label")
+
+$(tail -n 20 "$log")"
+    ;;
+esac

@@ -1,0 +1,81 @@
+#!/usr/bin/python3
+import json
+import sys
+import time
+
+from gi.repository import Gio, GLib
+
+SERVICE = "org.kde.JobViewServer"
+IFACE = "org.kde.JobViewV2"
+
+
+class JobView:
+    def __init__(self, title, info):
+        self.path = None
+        try:
+            self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+            # app name, icon name, capabilities (0 = not killable)
+            reply = self.bus.call_sync(
+                SERVICE, "/JobViewServer", "org.kde.JobViewServer", "requestView",
+                GLib.Variant("(ssi)", (title, "video-display", 0)),
+                None, Gio.DBusCallFlags.NONE, -1, None)
+            self.path = reply.unpack()[0]
+        except GLib.Error:
+            return
+        self.call("setInfoMessage", "(s)", info)
+
+    def call(self, method, signature, *args):
+        if not self.path:
+            return
+        try:
+            self.bus.call_sync(
+                SERVICE, self.path, IFACE, method, GLib.Variant(signature, args),
+                None, Gio.DBusCallFlags.NONE, -1, None)
+        except GLib.Error:
+            pass
+
+
+def main():
+    job = JobView(sys.argv[1], sys.argv[2])
+    message = ""
+    last_time = 0.0
+    last_bytes = 0
+    last_percent = 0
+
+    for line in sys.stdin:
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        kind = event.get("type")
+        if kind == "Terminate":
+            message = event.get("message", "")
+            break
+        if kind not in ("ProgressBytes", "ProgressSteps"):
+            continue
+
+        now = time.monotonic()
+        if now - last_time < 1:
+            continue
+
+        job.call("setDescriptionField", "(uss)", 0, "", event.get("description", ""))
+        # bootc reports byte progress while pulling and step progress otherwise
+        if kind == "ProgressBytes":
+            done, total = event.get("bytes", 0), event.get("bytesTotal", 0)
+            if last_time and done >= last_bytes:
+                job.call("setSpeed", "(t)", int((done - last_bytes) / (now - last_time)))
+            last_bytes = done
+            job.call("setTotalAmount", "(ts)", total, "bytes")
+            job.call("setProcessedAmount", "(ts)", done, "bytes")
+        else:
+            done, total = event.get("steps", 0), event.get("stepsTotal", 0)
+        if total > 0 and done * 100 // total > last_percent:
+            last_percent = done * 100 // total
+            job.call("setPercent", "(u)", last_percent)
+        last_time = now
+
+    job.call("terminate", "(s)", message)
+
+
+if __name__ == "__main__":
+    main()

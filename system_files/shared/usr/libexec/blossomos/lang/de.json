@@ -1,0 +1,23 @@
+{
+  "gpu-check": {
+    "variant": {
+      "nvidia": "NVIDIA",
+      "nvidia-legacy": "NVIDIA Legacy",
+      "generic": "Generic"
+    },
+    "reason": {
+      "nvidia": "Eine NVIDIA-Grafikkarte (Turing oder neuer) wurde erkannt, aber du verwendest das {current}-Image.",
+      "nvidia-legacy": "Eine ältere NVIDIA-Grafikkarte (Maxwell, Pascal oder Volta) wurde erkannt, aber du verwendest das {current}-Image.",
+      "generic": "Es wurde keine unterstützte NVIDIA-Grafikkarte erkannt, aber du verwendest das {current}-Image."
+    },
+    "recommend": "Für volle Grafikunterstützung wird der Wechsel zum {wanted}-Image empfohlen. Der Download läuft im Hintergrund und wird nach einem Neustart wirksam.",
+    "switch": "Zu {wanted} wechseln",
+    "not-now": "Nicht jetzt",
+    "dont-ask": "Nicht mehr fragen",
+    "progress": "Wechsel zum {wanted}-Image…",
+    "installed": "Das {wanted}-Image wurde installiert. Jetzt neu starten, um es zu verwenden?",
+    "reboot-now": "Jetzt neu starten",
+    "later": "Später",
+    "failed": "Der Wechsel zum {wanted}-Image ist fehlgeschlagen:"
+  }
+}
