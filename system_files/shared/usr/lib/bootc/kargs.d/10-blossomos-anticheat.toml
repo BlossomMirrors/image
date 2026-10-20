@@ -1,0 +1,14 @@
+# Easy Anti-Cheat Linux v2 platform requirements
+# https://onlineservices.epicgames.com/news/introducing-easy-anti-cheat-linux-v2
+#
+# lockdown=integrity: secure boot already raises lockdown to integrity on
+#   Fedora kernels, but EAC wants it requested explicitly on the cmdline
+# intel_iommu=on: CONFIG_INTEL_IOMMU_DEFAULT_ON is unset, AMD is on by default
+# iommu.passthrough=0: DMA translation, not identity mapping, for every device
+# sysctl.kernel.kexec_load_disabled=1: kexec'ing a new kernel would skip the
+#   measured boot log, so it has to be off from the start
+#
+# BPF LSM, TPM 2.0, secure boot and measured boot (shim + grub2) need no
+# kargs, CONFIG_LSM already includes bpf.
+kargs = ["lockdown=integrity", "intel_iommu=on", "iommu.passthrough=0", "sysctl.kernel.kexec_load_disabled=1"]
+match-architectures = ["x86_64"]

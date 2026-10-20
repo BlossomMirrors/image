@@ -1,0 +1,688 @@
+#!/usr/bin/python3
+"""BlossomOS integrity tooling.
+Every subcommand accepts --json (before or after the subcommand): stdout then
+carries exactly one JSON object with "command", "ok", "exit_code", the
+command's result fields and "messages"; everything else goes to stderr.
+Subcommands:
+  check [--json] [--online]   report whether this boot is in a trusted state
+  ensure-policy [--root DIR]  make containers-policy.json require signatures
+                              for BlossomOS images
+  verify-image                verify a BlossomOS image digest's cosign signature
+  migrate-origin              move a signature-less install onto a signed origin
+  switch REF                  bootc switch to a BlossomOS image, signed if possible
+  lock-layering true|false    forbid/allow rpm-ostree layering (integrity mode)
+  attest --nonce HEX --out D  TPM quote plus event logs for a remote verifier
+  activate --credential F     TPM2_ActivateCredential for the attestation key
+see docs/INTEGRITY.md in the image repository for what a verifier checks. The ISO's
+installer carries a copy of verify_image() (iso_files/blossomos-verify-image);
+keep the two in sync.
+"""
+import argparse
+import base64
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+INTEGRITY_DIR = "/usr/lib/blossomos/integrity"
+COSIGN_KEY = f"{INTEGRITY_DIR}/cosign.pub"
+SIGNED_REPOS_FILE = f"{INTEGRITY_DIR}/signed-repos"
+INITRD_STATE_DIR = "/run/blossomos-integrity"
+INTEGRITY_KARG = "blossomos.integrity=1"
+# Persistent handle for the attestation key, in the owner range and clear of
+# the TCG-reserved EK/SRK handles (0x81010001, 0x81000001).
+AK_HANDLE = "0x81000b10"
+QUOTE_PCRS = "sha256:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+LEGACY_SIG_ANNOTATION = "dev.cosignproject.cosign/signature"
+LEGACY_SIG_TYPE = "cosign container image signature"
+BUNDLE_MEDIA_TYPE = "application/vnd.dev.sigstore.bundle.v0.3+json"
+BUNDLE_PREDICATE_TYPE = "https://sigstore.dev/cosign/sign/v1"
+# Every transport containers/image knows. With the policy default switched to
+# reject (ostree-ext refuses signature enforcement while the default is
+# insecureAcceptAnything), each needs an explicit catch-all so podman, skopeo
+# and distrobox keep working for everything that isn't a BlossomOS image.
+POLICY_TRANSPORTS = (
+    "docker",
+    "docker-archive",
+    "docker-daemon",
+    "oci",
+    "oci-archive",
+    "dir",
+    "containers-storage",
+    "tarball",
+)
+
+JSON_MODE = False
+JSON_FD = None
+MESSAGES = []
+
+class CommandError(Exception):
+    def __init__(self, msg, code=2):
+        super().__init__(msg)
+        self.code = code
+
+def log(msg):
+    MESSAGES.append(msg)
+    print(f"blossomos-integrity: {msg}", file=sys.stderr)
+
+def say(text):
+    """Human-readable output, suppressed in --json mode."""
+    if not JSON_MODE:
+        print(text)
+
+def signed_repos():
+    with open(SIGNED_REPOS_FILE) as f:
+        return [l.strip() for l in f if l.strip() and not l.startswith("#")]
+
+def split_image(ref):
+    """'host/repo:tag' or 'host/repo@sha256:..' -> ('host/repo', 'tag'/'digest')."""
+    if "@" in ref:
+        repo, _, rest = ref.partition("@")
+        return repo, rest
+    last = ref.rsplit("/", 1)
+    if ":" in last[-1]:
+        repo, _, tag = ref.rpartition(":")
+        return repo, tag
+    return ref, "latest"
+
+def parse_origin(ref):
+    """Split an ostree container origin into (signature mode, transport, image).
+    ostree-unverified-registry:host/repo:tag     -> ("unverified", "registry", ...)
+    ostree-unverified-image:docker://host/repo   -> ("unverified", "registry", ...)
+    ostree-image-signed:docker://host/repo:tag   -> ("signed", "registry", ...)
+    ostree-remote-image:remote:docker://...      -> ("ostree-remote", ...)
+    """
+    if not ref:
+        return None, None, None
+    if ref.startswith("ostree-unverified-registry:"):
+        return "unverified", "registry", ref.split(":", 1)[1]
+    m = re.match(r"^(ostree-unverified-image|ostree-image-signed|ostree-remote-image:[^:]+):(.*)$", ref)
+    if not m:
+        return "unknown", None, ref
+    mode = {"ostree-unverified-image": "unverified", "ostree-image-signed": "signed"}.get(
+        m.group(1), "ostree-remote"
+    )
+    rest = m.group(2)
+    if rest.startswith("docker://"):
+        return mode, "registry", rest[len("docker://"):]
+    if rest.startswith("registry:"):
+        return mode, "registry", rest[len("registry:"):]
+    transport, _, image = rest.partition(":")
+    return mode, transport, image
+def _openssl_verify(key, data, sig):
+    with tempfile.TemporaryDirectory() as tmp:
+        data_path = os.path.join(tmp, "data")
+        sig_path = os.path.join(tmp, "sig")
+        with open(data_path, "wb") as f:
+            f.write(data)
+        with open(sig_path, "wb") as f:
+            f.write(sig)
+        r = subprocess.run(
+            ["openssl", "dgst", "-sha256", "-verify", key, "-signature", sig_path, data_path],
+            capture_output=True,
+        )
+        return r.returncode == 0
+
+def _skopeo_copy_dir(src, dest):
+    r = subprocess.run(
+        ["skopeo", "copy", "--quiet", "--retry-times", "3", src, f"dir:{dest}"],
+        capture_output=True,
+        text=True,
+    )
+    return r.returncode == 0
+
+def _skopeo_raw(src):
+    r = subprocess.run(
+        ["skopeo", "inspect", "--raw", "--retry-times", "3", src], capture_output=True, text=True
+    )
+    if r.returncode != 0:
+        return None
+    return json.loads(r.stdout)
+
+def _blob(sigdir, digest):
+    with open(os.path.join(sigdir, digest.split(":", 1)[1]), "rb") as f:
+        return f.read()
+
+def _identity_repo(reference):
+    return split_image(reference)[0] if reference else ""
+
+def _check_legacy(key, sigdir, digest, identities):
+    """Classic cosign signatures: sha256-<hex>.sig, one simple-signing payload per layer."""
+    with open(os.path.join(sigdir, "manifest.json")) as f:
+        manifest = json.load(f)
+    for layer in manifest.get("layers", []):
+        sig_b64 = layer.get("annotations", {}).get(LEGACY_SIG_ANNOTATION)
+        if not sig_b64:
+            continue
+        payload = _blob(sigdir, layer["digest"])
+        if not _openssl_verify(key, payload, base64.b64decode(sig_b64)):
+            continue
+        critical = json.loads(payload).get("critical", {})
+        if critical.get("type") != LEGACY_SIG_TYPE:
+            continue
+        if critical.get("image", {}).get("docker-manifest-digest") != digest:
+            continue
+        if _identity_repo(critical.get("identity", {}).get("docker-reference")) not in identities:
+            continue
+        return True
+    return False
+
+def _check_bundle(key, sigdir, digest):
+    """cosign 3 bundles: DSSE envelope over an in-toto statement naming the digest."""
+    with open(os.path.join(sigdir, "manifest.json")) as f:
+        manifest = json.load(f)
+    alg, _, hexdigest = digest.partition(":")
+    for layer in manifest.get("layers", []):
+        if layer.get("mediaType") != BUNDLE_MEDIA_TYPE:
+            continue
+        envelope = json.loads(_blob(sigdir, layer["digest"])).get("dsseEnvelope")
+        if not envelope:
+            continue
+        payload_type = envelope["payloadType"].encode()
+        payload = base64.b64decode(envelope["payload"])
+        pae = b"DSSEv1 %d %s %d %s" % (len(payload_type), payload_type, len(payload), payload)
+        if not any(_openssl_verify(key, pae, base64.b64decode(s["sig"])) for s in envelope["signatures"]):
+            continue
+        statement = json.loads(payload)
+        if statement.get("predicateType") != BUNDLE_PREDICATE_TYPE:
+            continue
+        if any(s.get("digest", {}).get(alg) == hexdigest for s in statement.get("subject", [])):
+            return True
+    return False
+
+def verify_image(repo, digest, key=COSIGN_KEY, identities=None, formats=("legacy", "bundle"),
+                 sigdir=None, save_to=None):
+    """Return the list of signature formats that verified for repo@digest.
+    Signatures are looked up in sigdir/<hex>/ first (offline copies saved with
+    save_to), then fetched from repo. identities are the repositories a legacy
+    signature's payload may name; mirrors can serve BlossomOS signatures as
+    long as the payload still names a BlossomOS repository.
+    """
+    if identities is None:
+        identities = signed_repos()
+    alg, _, hexdigest = digest.partition(":")
+    if alg != "sha256" or not re.fullmatch(r"[0-9a-f]{64}", hexdigest):
+        raise ValueError(f"not a sha256 digest: {digest}")
+    verified = []
+    with tempfile.TemporaryDirectory() as tmp:
+        candidates = []  # (format, dir)
+        offline = os.path.join(sigdir, hexdigest) if sigdir else None
+        if offline and os.path.isdir(offline):
+            for name in sorted(os.listdir(offline)):
+                fmt = "legacy" if name == "legacy" else "bundle"
+                candidates.append((fmt, os.path.join(offline, name)))
+        else:
+            if "legacy" in formats:
+                d = os.path.join(tmp, "legacy")
+                if _skopeo_copy_dir(f"docker://{repo}:{alg}-{hexdigest}.sig", d):
+                    candidates.append(("legacy", d))
+            if "bundle" in formats:
+                # OCI 1.1 referrers tag schema fallback, which is how cosign 3
+                # stores bundles on registries without the referrers API.
+                index = _skopeo_raw(f"docker://{repo}:{alg}-{hexdigest}") or {}
+                for i, m in enumerate(index.get("manifests", [])):
+                    if m.get("artifactType") != BUNDLE_MEDIA_TYPE:
+                        continue
+                    d = os.path.join(tmp, f"bundle-{i}")
+                    if _skopeo_copy_dir(f"docker://{repo}@{m['digest']}", d):
+                        candidates.append(("bundle", d))
+        for fmt, d in candidates:
+            if fmt not in formats or fmt in verified:
+                continue
+            ok = (_check_legacy(key, d, digest, identities) if fmt == "legacy"
+                  else _check_bundle(key, d, digest))
+            if ok:
+                verified.append(fmt)
+                if save_to:
+                    dest = os.path.join(save_to, hexdigest, os.path.basename(d))
+                    shutil.rmtree(dest, ignore_errors=True)
+                    shutil.copytree(d, dest)
+    return verified
+
+def remote_digest(image):
+    r = subprocess.run(
+        ["skopeo", "inspect", "--no-tags", "--retry-times", "3", f"docker://{image}"],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"cannot inspect {image}: {r.stderr.strip()}")
+    return json.loads(r.stdout)["Digest"]
+
+def desired_policy(policy):
+    policy = json.loads(json.dumps(policy)) if policy else {}
+    policy["default"] = [{"type": "reject"}]
+    transports = policy.setdefault("transports", {})
+    for t in POLICY_TRANSPORTS:
+        transports.setdefault(t, {}).setdefault("", [{"type": "insecureAcceptAnything"}])
+    for repo in signed_repos():
+        transports["docker"][repo] = [
+            {
+                "type": "sigstoreSigned",
+                "keyPath": COSIGN_KEY,
+                "signedIdentity": {"type": "matchRepository"},
+            }
+        ]
+    return policy
+
+def cmd_ensure_policy(args):
+    path = os.path.join(args.root, "etc/containers/policy.json")
+    current = None
+    if os.path.exists(path):
+        with open(path) as f:
+            current = json.load(f)
+    wanted = desired_policy(current)
+    if wanted == current:
+        return 0, {"path": path, "changed": False}
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.blossomos-new"
+    with open(tmp, "w") as f:
+        json.dump(wanted, f, indent=4)
+        f.write("\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+    log(f"updated {path}")
+    return 0, {"path": path, "changed": True}
+
+def policy_enforces_blossomos():
+    try:
+        with open("/etc/containers/policy.json") as f:
+            policy = json.load(f)
+    except (OSError, ValueError):
+        return False
+    return policy == desired_policy(policy)
+
+def rpm_ostree_status():
+    r = subprocess.run(["rpm-ostree", "status", "--json"], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"rpm-ostree status failed: {r.stderr.strip()}")
+    return json.loads(r.stdout)
+
+def deployment(status, key):
+    return next((d for d in status.get("deployments", []) if d.get(key)), None)
+
+def cmdline():
+    with open("/proc/cmdline") as f:
+        return f.read().split()
+
+def secure_boot_enabled():
+    path = "/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+    except OSError:
+        return None if os.path.isdir("/sys/firmware/efi") else False
+    return len(data) >= 5 and data[4] == 1
+
+def lockdown_mode():
+    try:
+        with open("/sys/kernel/security/lockdown") as f:
+            m = re.search(r"\[(\w+)\]", f.read())
+            return m.group(1) if m else None
+    except OSError:
+        return None
+
+def read_env(path):
+    out = {}
+    try:
+        with open(path) as f:
+            for line in f:
+                k, sep, v = line.rstrip("\n").partition("=")
+                if sep:
+                    out[k] = v
+    except OSError:
+        return None
+    return out
+
+def usr_is_overlay():
+    r = subprocess.run(["findmnt", "-n", "-o", "FSTYPE", "/usr"], capture_output=True, text=True)
+    return r.stdout.strip() == "overlay"
+
+def collect(online=False):
+    reasons = []
+    report = {"version": 1}
+    report["secure_boot"] = secure_boot_enabled()
+    if report["secure_boot"] is not True:
+        reasons.append("secure-boot-disabled")
+    report["lockdown"] = lockdown_mode()
+    if report["lockdown"] in (None, "none"):
+        reasons.append("kernel-lockdown-off")
+    report["tpm"] = os.path.exists("/dev/tpmrm0")
+    if not report["tpm"]:
+        reasons.append("no-tpm")
+    status = rpm_ostree_status()
+    booted = deployment(status, "booted") or {}
+    ref = booted.get("container-image-reference")
+    mode, transport, image = parse_origin(ref)
+    repo = split_image(image)[0] if image else None
+    trusted_repo = transport == "registry" and repo in signed_repos()
+    report["image"] = {
+        "reference": ref,
+        "digest": booted.get("container-image-reference-digest"),
+        "signature": mode,
+        "trusted_repository": trusted_repo,
+        "policy_enforced": policy_enforces_blossomos(),
+    }
+    if mode != "signed":
+        reasons.append("image-origin-not-signature-verified")
+    if not trusted_repo:
+        reasons.append("image-not-from-blossomos")
+    if not report["image"]["policy_enforced"]:
+        reasons.append("signature-policy-missing")
+    if online and report["image"]["digest"] and trusted_repo:
+        try:
+            ok = verify_image(repo, report["image"]["digest"])
+        except Exception as e:  # network, registry, ...
+            ok = []
+            report["image"]["online_error"] = str(e)
+        report["image"]["online_verified"] = ok
+        if not ok:
+            reasons.append("image-digest-signature-invalid")
+    unlocked = booted.get("unlocked", "none")
+    overlay = usr_is_overlay()
+    report["usr"] = {"unlocked": unlocked, "overlay": overlay}
+    if unlocked != "none" or overlay:
+        reasons.append("usr-unlocked")
+    layering = {
+        "packages": booted.get("requested-packages", []) + booted.get("requested-local-packages", []),
+        "removals": booted.get("requested-base-removals", []) or booted.get("base-removals", []),
+        "replacements": booted.get("requested-base-local-replacements", [])
+        or booted.get("base-local-replacements", []),
+        "regenerate_initramfs": bool(booted.get("regenerate-initramfs")),
+        "initramfs_etc": booted.get("initramfs-etc", []),
+    }
+    report["layering"] = layering
+    if any(layering.values()):
+        reasons.append("usr-layered")
+    try:
+        with open("/etc/ld.so.preload") as f:
+            preload = [l for l in f.read().split() if l]
+    except OSError:
+        preload = []
+    report["ld_so_preload"] = preload
+    if preload:
+        reasons.append("ld-so-preload")
+    report["integrity_mode"] = INTEGRITY_KARG in cmdline()
+    report["ima_policy_loaded"] = os.path.exists(f"{INITRD_STATE_DIR}/ima-policy-loaded")
+    report["initrd"] = read_env(f"{INITRD_STATE_DIR}/initrd.env")
+    if not report["integrity_mode"]:
+        reasons.append("integrity-mode-off")
+    elif not report["ima_policy_loaded"]:
+        reasons.append("ima-policy-not-loaded")
+    initrd = report["initrd"] or {}
+    if initrd.get("MEASURED") != "yes":
+        reasons.append("boot-not-measured")
+    if report["integrity_mode"] and initrd.get("GATE") != "pass":
+        reasons.append("boot-gate-not-passed")
+    report["trusted"] = not reasons
+    report["reasons"] = reasons
+    return report
+
+def cmd_check(args):
+    report = collect(online=args.online)
+    if not JSON_MODE:
+        img = report["image"]
+        print(f"Image:          {img['reference']}")
+        print(f"Digest:         {img['digest']}")
+        print(f"Signature:      {img['signature']} (policy enforced: {img['policy_enforced']})")
+        print(f"Secure Boot:    {report['secure_boot']}")
+        print(f"Lockdown:       {report['lockdown']}")
+        print(f"TPM:            {report['tpm']}")
+        print(f"/usr:           unlocked={report['usr']['unlocked']} overlay={report['usr']['overlay']}")
+        print(f"Integrity mode: {report['integrity_mode']} (IMA policy loaded: {report['ima_policy_loaded']})")
+        print(f"Trusted:        {report['trusted']}")
+        for r in report["reasons"]:
+            print(f"  - {r}")
+    return (0 if report["trusted"] else 1), report
+
+def cmd_verify_image(args):
+    formats = tuple(args.format) if args.format else ("legacy", "bundle")
+    result = {"repository": args.repo, "digest": args.digest, "verified": [], "valid": False}
+    try:
+        ok = verify_image(args.repo, args.digest, key=args.key, formats=formats,
+                          sigdir=args.sigdir, save_to=args.save_to)
+    except Exception as e:
+        log(f"verification error: {e}")
+        result["error"] = str(e)
+        return 2, result
+    result.update(verified=ok, valid=bool(ok))
+    if not ok:
+        log(f"no valid signature for {args.repo}@{args.digest}")
+        return 1, result
+    say(" ".join(ok))
+    return 0, result
+
+def require_root():
+    if os.geteuid() != 0:
+        raise CommandError("must be run as root")
+
+def signed_switch(image, allow_unsigned):
+    """bootc switch to image with signature enforcement if the registry has a
+    signature podman/bootc can see; otherwise optionally fall back to an
+    unverified switch (migrate-origin picks it up once signatures appear).
+    Returns (exit code, result)."""
+    repo, _ = split_image(image)
+    result = {"image": image, "digest": None, "signature_verified": False,
+              "enforced": False, "switched": False}
+    if repo in signed_repos():
+        cmd_ensure_policy(argparse.Namespace(root="/"))
+        result["digest"] = remote_digest(image)
+        if "legacy" in verify_image(repo, result["digest"], formats=("legacy",)):
+            result.update(signature_verified=True, enforced=True)
+            rc = subprocess.run(["bootc", "switch", "--enforce-container-sigpolicy", image]).returncode
+            result["switched"] = rc == 0
+            return rc, result
+        log(f"{image} ({result['digest']}) has no podman-compatible signature yet")
+    else:
+        log(f"{image} is not a BlossomOS image, it can't be signature-verified")
+    if not allow_unsigned:
+        return 1, result
+    log("switching without signature verification")
+    rc = subprocess.run(["bootc", "switch", image]).returncode
+    result["switched"] = rc == 0
+    return rc, result
+
+def cmd_switch(args):
+    require_root()
+    return signed_switch(args.image, allow_unsigned=INTEGRITY_KARG not in cmdline())
+
+def cmd_migrate_origin(args):
+    require_root()
+    status = rpm_ostree_status()
+    booted = deployment(status, "booted") or {}
+    staged = deployment(status, "staged") or {}
+    for dep in (staged, booted):
+        if parse_origin(dep.get("container-image-reference"))[0] == "signed":
+            return 0, {"action": "already-signed",
+                       "image": dep.get("container-image-reference")}
+    ref = booted.get("container-image-reference")
+    mode, transport, image = parse_origin(ref)
+    if mode != "unverified" or transport != "registry":
+        return 0, {"action": "skipped", "image": ref, "reason": "not an unverified registry origin"}
+    if split_image(image)[0] not in signed_repos():
+        log(f"leaving {image} alone, it isn't a BlossomOS image")
+        return 0, {"action": "skipped", "image": ref, "reason": "not a BlossomOS image"}
+    log(f"moving {image} to a signature-verified origin")
+    rc, result = signed_switch(image, allow_unsigned=False)
+    if result["switched"]:
+        action = "switched"
+    elif not result["signature_verified"]:
+        # Not an error; the timer retries once the signature exists.
+        action, rc = "no-signature-yet", 0
+    else:
+        action = "failed"
+    return rc, {"action": action, **result}
+RPM_OSTREED_CONF = "/etc/rpm-ostreed.conf"
+def cmd_lock_layering(args):
+    """Integrity mode refuses to boot layered or overridden deployments, so
+    stop rpm-ostree from creating them instead of letting the next boot fail."""
+    require_root()
+    wanted = f"LockLayering={args.state}"
+    try:
+        with open(RPM_OSTREED_CONF) as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        lines = ["[Daemon]"]
+    current = [l for l in lines if re.match(r"^\s*LockLayering\s*=", l)]
+    result = {"path": RPM_OSTREED_CONF, "state": args.state == "true", "changed": False}
+    if current == [wanted]:
+        return 0, result
+    lines = [l for l in lines if not re.match(r"^\s*LockLayering\s*=", l)]
+    try:
+        at = lines.index("[Daemon]") + 1
+    except ValueError:
+        lines.append("[Daemon]")
+        at = len(lines)
+    lines.insert(at, wanted)
+    tmp = f"{RPM_OSTREED_CONF}.blossomos-new"
+    with open(tmp, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, RPM_OSTREED_CONF)
+    log(f"set {wanted} in {RPM_OSTREED_CONF}")
+    if args.reload:
+        subprocess.run(["rpm-ostree", "reload"], check=False)
+    result["changed"] = True
+    return 0, result
+def tpm2(*argv, **kw):
+    return subprocess.run(["tpm2_" + argv[0], *argv[1:]], check=True, **kw)
+
+def create_ek(tmp, alg):
+    ctx = os.path.join(tmp, "ek.ctx")
+    tpm2("createek", "-c", ctx, "-G", alg, "-u", os.path.join(tmp, "ek.pub"), "-f", "pem")
+    return ctx
+
+def ensure_ak(ek_ctx, tmp):
+    r = subprocess.run(["tpm2_readpublic", "-c", AK_HANDLE], capture_output=True)
+    if r.returncode == 0:
+        return
+    ak_ctx = os.path.join(tmp, "ak.ctx")
+    tpm2("createak", "-C", ek_ctx, "-c", ak_ctx, "-G", "ecc", "-g", "sha256", "-s", "ecdsa",
+         "-u", os.path.join(tmp, "ak.tpmpub"), "-n", os.path.join(tmp, "ak.name"))
+    tpm2("evictcontrol", "-C", "o", "-c", ak_ctx, AK_HANDLE)
+
+def cmd_attest(args):
+    require_root()
+    if not re.fullmatch(r"[0-9a-fA-F]{2,128}", args.nonce):
+        raise CommandError("--nonce must be hex")
+    out = args.out
+    os.makedirs(out, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        ek_ctx = create_ek(tmp, args.ek_alg)
+        shutil.copy(os.path.join(tmp, "ek.pub"), os.path.join(out, "ek.pem"))
+        ensure_ak(ek_ctx, tmp)
+    tpm2("readpublic", "-c", AK_HANDLE, "-f", "pem", "-o", os.path.join(out, "ak.pem"),
+         "-n", os.path.join(out, "ak.name"), stdout=subprocess.DEVNULL)
+    tpm2("quote", "-c", AK_HANDLE, "-l", QUOTE_PCRS, "-q", args.nonce, "-g", "sha256",
+         "-m", os.path.join(out, "quote.msg"), "-s", os.path.join(out, "quote.sig"),
+         "-o", os.path.join(out, "quote.pcrs"), stdout=subprocess.DEVNULL)
+    # The EK certificate lets a verifier tie the EK to a real TPM vendor. Not
+    # every TPM stores one in NV, and some need the vendor's web service.
+    subprocess.run(["tpm2_getekcertificate", "-o", os.path.join(out, "ek.crt")],
+                   capture_output=True)
+    logs = {
+        "tcg-eventlog.bin": "/sys/kernel/security/tpm0/binary_bios_measurements",
+        "ima-log.bin": "/sys/kernel/security/ima/binary_runtime_measurements",
+        "systemd-tpm2-measure.log": "/run/log/systemd/tpm2-measure.log",
+        "initrd.env": f"{INITRD_STATE_DIR}/initrd.env",
+    }
+    for name, src in logs.items():
+        try:
+            shutil.copy(src, os.path.join(out, name))
+        except OSError:
+            pass
+    with open(os.path.join(out, "status.json"), "w") as f:
+        json.dump(collect(), f, indent=2)
+    with open(os.path.join(out, "nonce"), "w") as f:
+        f.write(args.nonce + "\n")
+    say(out)
+    return 0, {"out": os.path.abspath(out), "nonce": args.nonce,
+               "files": sorted(os.listdir(out))}
+
+def cmd_activate(args):
+    require_root()
+    with tempfile.TemporaryDirectory() as tmp:
+        ek_ctx = create_ek(tmp, args.ek_alg)
+        session = os.path.join(tmp, "session.ctx")
+        tpm2("startauthsession", "--policy-session", "-S", session)
+        try:
+            tpm2("policysecret", "-S", session, "-c", "e", stdout=subprocess.DEVNULL)
+            tpm2("activatecredential", "-c", AK_HANDLE, "-C", ek_ctx, "-i", args.credential,
+                 "-o", args.secret_out, "-P", f"session:{session}")
+        finally:
+            subprocess.run(["tpm2_flushcontext", session], capture_output=True)
+    return 0, {"secret_out": os.path.abspath(args.secret_out)}
+
+def main():
+    p = argparse.ArgumentParser(prog="blossomos-integrity")
+    p.add_argument("--json", action="store_true", help="machine-readable output on stdout")
+    # Also accept --json after the subcommand; SUPPRESS keeps the top-level
+    # value when it isn't repeated there.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
+                        help="machine-readable output on stdout")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("check", parents=[common], help="report whether this boot is in a trusted state")
+    s.add_argument("--online", action="store_true",
+                   help="also verify the booted digest's signature against the registry")
+    s.set_defaults(func=cmd_check)
+    s = sub.add_parser("ensure-policy", parents=[common], help="require signatures for BlossomOS images")
+    s.add_argument("--root", default="/")
+    s.set_defaults(func=cmd_ensure_policy)
+    s = sub.add_parser("verify-image", parents=[common], help="verify a BlossomOS image digest's signature")
+    s.add_argument("--repo", required=True)
+    s.add_argument("--digest", required=True)
+    s.add_argument("--key", default=COSIGN_KEY)
+    s.add_argument("--format", action="append", choices=("legacy", "bundle"))
+    s.add_argument("--sigdir", help="look for offline signature copies here first")
+    s.add_argument("--save-to", help="save verified signatures here for offline use")
+    s.set_defaults(func=cmd_verify_image)
+    s = sub.add_parser("migrate-origin", parents=[common], help="move this install onto a signed origin")
+    s.set_defaults(func=cmd_migrate_origin)
+    s = sub.add_parser("switch", parents=[common], help="bootc switch, with signature enforcement if possible")
+    s.add_argument("image")
+    s.set_defaults(func=cmd_switch)
+    s = sub.add_parser("lock-layering", parents=[common], help="allow or forbid rpm-ostree layering and overrides")
+    s.add_argument("state", choices=("true", "false"))
+    s.add_argument("--reload", action="store_true", help="make rpm-ostreed pick it up now")
+    s.set_defaults(func=cmd_lock_layering)
+    s = sub.add_parser("attest", parents=[common], help="TPM quote and event logs for a remote verifier")
+    s.add_argument("--nonce", required=True, help="verifier-chosen hex nonce")
+    s.add_argument("--out", required=True)
+    s.add_argument("--ek-alg", default="rsa", choices=("rsa", "ecc"))
+    s.set_defaults(func=cmd_attest)
+    s = sub.add_parser("activate", parents=[common], help="TPM2_ActivateCredential for the attestation key")
+    s.add_argument("--credential", required=True, help="credential blob from the verifier")
+    s.add_argument("--secret-out", required=True)
+    s.add_argument("--ek-alg", default="rsa", choices=("rsa", "ecc"))
+    s.set_defaults(func=cmd_activate)
+    args = p.parse_args()
+    run(args)
+
+def run(args):
+    global JSON_MODE, JSON_FD
+    JSON_MODE = args.json
+    if JSON_MODE:
+        # Keep stdout for the JSON document alone: anything else printed, by
+        # us or by bootc, rpm-ostree, tpm2-tools, ..., goes to stderr.
+        sys.stdout.flush()
+        JSON_FD = os.dup(1)
+        os.dup2(2, 1)
+    try:
+        rc, result = args.func(args)
+    except CommandError as e:
+        log(str(e))
+        rc, result = e.code, {"error": str(e)}
+    except (subprocess.CalledProcessError, OSError, RuntimeError, ValueError) as e:
+        log(f"error: {e}")
+        rc, result = 2, {"error": str(e)}
+    if JSON_MODE:
+        sys.stdout.flush()
+        doc = {"command": args.cmd, "ok": rc == 0, "exit_code": rc, **result,
+               "messages": MESSAGES}
+        os.write(JSON_FD, (json.dumps(doc, indent=2) + "\n").encode())
+    sys.exit(rc)
+
+if __name__ == "__main__":
+    main()
