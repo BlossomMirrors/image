@@ -43,6 +43,10 @@ it to someone, for example as part of an attestation.
 - **Image signing** (`build.sh`): every pushed digest gets a classic cosign
   signature (`sha256-<digest>.sig`, what podman/skopeo/bootc check) and a
   cosign 3 bundle, both made with the key whose public half is `cosign.pub`.
+  Both are also recorded in the public Sigstore transparency log (Rekor),
+  permanently, which is what lets a plain `cosign verify --key cosign.pub`
+  succeed. Installed systems and `blossomos-integrity` only check the key and
+  don't need the log entry.
 - **Signature policy** (`build_files/base/16-integrity.sh`,
   `/etc/containers/policy.json`, `/etc/containers/registries.d/blossomos.yaml`):
   `registry.blossomos.org/blossom/image` and `image-dev` require a signature
