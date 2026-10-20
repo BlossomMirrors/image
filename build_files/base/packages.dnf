@@ -104,6 +104,7 @@ plasma-union
 plasma-wallpapers-dynamic
 plasma-welcome
 kdialog
+python3-gobject
 polkit-kde
 qqc2-breeze-style
 xdg-desktop-portal-kde
