@@ -17,4 +17,9 @@ export DRACUT_NO_XATTR=1
 /usr/bin/dracut --no-hostonly --kver "${KERNEL_VERSION}" --reproducible -v -f "/usr/lib/modules/${KERNEL_VERSION}/initramfs.img"
 chmod 0600 "/usr/lib/modules/${KERNEL_VERSION}/initramfs.img"
 
+/usr/libexec/blossomos-recovery/build-overlay \
+    --base "/usr/lib/modules/${KERNEL_VERSION}/initramfs.img" \
+    "${KERNEL_VERSION}" "/usr/lib/modules/${KERNEL_VERSION}/blossomos-recovery.img"
+chmod 0600 "/usr/lib/modules/${KERNEL_VERSION}/blossomos-recovery.img"
+
 echo "::endgroup::"
