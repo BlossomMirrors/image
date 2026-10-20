@@ -1,0 +1,11 @@
+[Unit]
+Description=BlossomOS integrity mode: load the IMA measurement policy
+DefaultDependencies=no
+ConditionKernelCommandLine=blossomos.integrity=1
+ConditionPathExists=/etc/initrd-release
+Before=sysroot.mount initrd-root-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-integrity-initrd ima-policy

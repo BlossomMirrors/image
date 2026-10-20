@@ -1,0 +1,14 @@
+[Unit]
+Description=BlossomOS integrity: measure the deployment about to boot
+DefaultDependencies=no
+ConditionPathExists=/etc/initrd-release
+After=sysroot.mount blossomos-integrity-ima.service
+Before=ostree-prepare-root.service initrd-root-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-integrity-initrd measure
+# Only fails when integrity mode refuses the deployment, see the script
+FailureAction=poweroff
+StandardOutput=journal+console

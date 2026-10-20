@@ -160,7 +160,10 @@ skanpage
 system-config-printer
 
 # Security
+openssl
 setools-console
+skopeo
+tpm2-tools
 ufw
 
 # Shells / CLI Tools

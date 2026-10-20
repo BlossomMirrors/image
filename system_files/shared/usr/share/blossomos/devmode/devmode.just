@@ -28,5 +28,6 @@ toggle:
     fi
 
     sudo -v
-    sudo bootc switch "${REGISTRY}:${TARGET}"
+    # verifies the image signature when the registry publishes one
+    sudo blossomos-integrity switch "${REGISTRY}:${TARGET}"
     gum style --foreground 2 "Switched to ${TARGET}. Reboot to apply."

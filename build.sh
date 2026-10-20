@@ -116,6 +116,38 @@ build_and_push() {
     echo "==> Signing ${REMOTE_DIGEST_REF}"
     COSIGN_PASSWORD="" cosign sign --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
 
+    # cosign 3 only writes new-format bundles (OCI referrers) by default, and
+    # podman/skopeo/bootc can't see those: their signature policy, which
+    # installed systems enforce (see build_files/base/16-integrity.sh), only
+    # looks for the classic sha256-<digest>.sig tag. Write that one as well and
+    # make sure it's there, an image without it can't be updated to.
+    echo "==> Signing ${REMOTE_DIGEST_REF} (containers-policy compatible)"
+    COSIGN_PASSWORD="" cosign sign --new-bundle-format=false --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
+    SIG_REF="${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${DIGEST/:/-}.sig"
+    if ! skopeo inspect --raw "docker://${SIG_REF}" >/dev/null; then
+        echo "ERROR: ${SIG_REF} is missing after signing, installed systems would refuse this image" >&2
+        exit 1
+    fi
+
+    # Reference values for remote attestation (see docs/INTEGRITY.md). The
+    # predicate carries the whole /usr file manifest, a few MB, which is too
+    # large for the public Rekor transparency log.
+    echo "==> Attesting integrity reference values for ${REMOTE_DIGEST_REF}"
+    PREDICATE_DIR="$(mktemp -d)"
+    "${PODMAN}" run --rm --network=none --security-opt label=disable \
+        --volume "${SCRIPT_DIR}/build_files/shared/integrity-manifest.py:/tmp/integrity-manifest.py:ro" \
+        --volume "${PREDICATE_DIR}:/out" \
+        --entrypoint /usr/bin/python3 \
+        "${LOCAL_REF}" /tmp/integrity-manifest.py \
+        --repository "${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}" \
+        --digest "${DIGEST}" --tag "${REMOTE_TAG}" --out /out/predicate.json
+    COSIGN_PASSWORD="" cosign attest --yes --key "${SCRIPT_DIR}/cosign.key" \
+        --type "https://blossomos.org/integrity/v1" \
+        --predicate "${PREDICATE_DIR}/predicate.json" \
+        --use-signing-config=false --tlog-upload=false \
+        "${REMOTE_DIGEST_REF}"
+    rm -rf "${PREDICATE_DIR}"
+
     echo "==> Done: ${REMOTE_REF} (${DIGEST})"
 
     # Push and sign succeeded, so the previous digest behind this tag is now
