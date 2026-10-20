@@ -122,7 +122,7 @@ build_and_push() {
     # looks for the classic sha256-<digest>.sig tag. Write that one as well and
     # make sure it's there, an image without it can't be updated to.
     echo "==> Signing ${REMOTE_DIGEST_REF} (containers-policy compatible)"
-    COSIGN_PASSWORD="" cosign sign --new-bundle-format=false --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
+    COSIGN_PASSWORD="" cosign sign --new-bundle-format=false --use-signing-config=false --key "${SCRIPT_DIR}/cosign.key" "${REMOTE_DIGEST_REF}"
     SIG_REF="${REGISTRY}/${REGISTRY_ORG}/${REGISTRY_IMAGE}:${DIGEST/:/-}.sig"
     if ! skopeo inspect --raw "docker://${SIG_REF}" >/dev/null; then
         echo "ERROR: ${SIG_REF} is missing after signing, installed systems would refuse this image" >&2
