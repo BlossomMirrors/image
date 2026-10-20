@@ -74,6 +74,12 @@ dnf5 download --destdir=/tmp/blossom-xdg-desktop-portal --disablerepo='*' --enab
 dnf5 install -y /tmp/blossom-xdg-desktop-portal/*.rpm
 rm -rf /tmp/blossom-xdg-desktop-portal
 
+# Replace stock plasma-desktop with our BlossomOS-patched build, whose Session KCM can pick BlossomOS Recovery for the next restart (with blossom-recovery's units and polkit rule)
+mkdir -p /tmp/blossom-plasma-desktop
+dnf5 download --destdir=/tmp/blossom-plasma-desktop --disablerepo='*' --enablerepo="${REPO_ID}" plasma-desktop
+dnf5 install -y /tmp/blossom-plasma-desktop/*.rpm
+rm -rf /tmp/blossom-plasma-desktop
+
 # Install OpenRazer daemon (kmod is installed by the akmods module)
 dnf -y config-manager addrepo --overwrite --from-repofile=https://openrazer.github.io/hardware:razer.repo
 dnf -y install openrazer-daemon || true
