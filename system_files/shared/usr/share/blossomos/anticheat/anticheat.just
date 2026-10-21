@@ -30,7 +30,8 @@ eac-check:
     fi
 
     # 4. measured boot - grub2 measures the kernel and cmdline into PCR 8/9
-    if [[ -s /sys/kernel/security/tpm0/binary_bios_measurements ]] &&
+    # (securityfs reports the event log's size as 0, so only check it exists)
+    if [[ -e /sys/kernel/security/tpm0/binary_bios_measurements ]] &&
         sudo tpm2_eventlog /sys/kernel/security/tpm0/binary_bios_measurements 2>/dev/null | grep -qE 'PCRIndex: (8|9)$'; then
         pass "Measured boot log present"
     else
