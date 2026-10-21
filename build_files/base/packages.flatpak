@@ -16,7 +16,7 @@ org.kde.gwenview
 
 # Utilities
 io.github.nokse22.Exhibit
-net.imput.helium blossomos
+net.imput.helium blossomos master
 org.kde.kalk
 org.kde.kclock
 org.kde.kweather
