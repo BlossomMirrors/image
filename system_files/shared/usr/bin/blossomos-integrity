@@ -127,7 +127,7 @@ def _openssl_verify(key, data, sig):
 
 def _skopeo_copy_dir(src, dest):
     r = subprocess.run(
-        ["skopeo", "copy", "--quiet", "--retry-times", "3", src, f"dir:{dest}"],
+        ["skopeo", "--insecure-policy", "copy", "--quiet", "--retry-times", "3", src, f"dir:{dest}"],
         capture_output=True,
         text=True,
     )
