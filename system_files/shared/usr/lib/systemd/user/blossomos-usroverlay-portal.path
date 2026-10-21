@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for a writable /usr overlay (rpm-ostree usroverlay)
+
+[Path]
+PathExistsGlob=/run/ostree/deployment-state/*/unlocked-development
+Unit=blossomos-usroverlay-portal.service
+
+[Install]
+WantedBy=default.target

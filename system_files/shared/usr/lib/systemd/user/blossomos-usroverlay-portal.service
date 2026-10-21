@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart the document portal after /usr was overlaid
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user try-restart xdg-document-portal.service

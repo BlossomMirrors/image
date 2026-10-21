@@ -70,6 +70,9 @@ systemctl --global disable app-dev.lizardbyte.app.Sunshine.service
 # Enable the automatic updates by default
 systemctl enable rpm-ostreed-automatic.timer
 
+# Fix flatpaks being broken after running usroverlay
+systemctl --global enable blossomos-usroverlay-portal.path
+
 # Hide Desktop Files. Hidden removes mime associations
 # kbd-layout-viewer5 ships from fcitx5-configtool; its actual config UI
 # (org.fcitx.fcitx5-config-qt.desktop) already ships with NoDisplay=true.
