@@ -1,0 +1,5 @@
+[org.gnome.desktop.interface]
+gtk-theme='BlossomUI'
+icon-theme='BlossomUI'
+cursor-theme='Bibata-Modern-Classic'
+cursor-size=20
