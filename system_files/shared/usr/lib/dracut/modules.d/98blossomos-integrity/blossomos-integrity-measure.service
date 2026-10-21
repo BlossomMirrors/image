@@ -2,7 +2,7 @@
 Description=BlossomOS integrity: measure the deployment about to boot
 DefaultDependencies=no
 ConditionPathExists=/etc/initrd-release
-After=sysroot.mount blossomos-integrity-ima.service
+After=sysroot.mount
 Before=ostree-prepare-root.service initrd-root-fs.target
 
 [Service]

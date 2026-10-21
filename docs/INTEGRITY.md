@@ -19,7 +19,6 @@ It answers three questions:
 | Booted image, signature state, `/usr` state and layering are recorded in TPM PCR 15 | ✅ (if a TPM is present) | ✅ |
 | Boot is refused for unsigned, unlocked (`hotfix`) or layered deployments | | ✅ |
 | rpm-ostree layering and overrides are locked | | ✅ |
-| Every executed program, executable mapping and kernel module is hashed into PCR 10 (IMA) | | ✅ |
 
 Integrity mode is on by default for systems installed from an ISO that
 includes this, as long as the installed image has the boot gate and a
@@ -33,10 +32,6 @@ While integrity mode is on, rpm-ostree layering and overrides are locked
 by `blossomos-integrity-lock-layering.service`), since the boot gate would
 refuse the resulting deployment anyway. Use distrobox (`adjust pkglayer`) or
 Flatpak instead, or turn integrity mode off.
-
-The IMA log records every program that runs on the machine. It is readable by
-root only and never leaves the machine unless software running as root hands
-it to someone, for example as part of an attestation.
 
 ## Components
 
@@ -62,8 +57,8 @@ it to someone, for example as part of an attestation.
   origin.
 - **Initramfs module** (`98blossomos-integrity`): the initramfs is part of the
   signed image and measured by GRUB into PCR 9, so what it records can be
-  trusted. It measures the deployment into PCR 15, loads the IMA policy and
-  gates the boot in integrity mode.
+  trusted. It measures the deployment into PCR 15 and gates the boot in
+  integrity mode.
 - **Reference values** (`build_files/shared/integrity-manifest.py`): attached
   to every digest as a cosign attestation of type
   `https://blossomos.org/integrity/v1`.
@@ -82,7 +77,7 @@ blossomos-integrity check --online      # also re-verify the digest's signature
 `image-origin-not-signature-verified`, `image-not-from-blossomos`,
 `signature-policy-missing`, `image-digest-signature-invalid`,
 `usr-unlocked`, `usr-layered`, `ld-so-preload`, `integrity-mode-off`,
-`ima-policy-not-loaded`, `boot-not-measured`, `boot-gate-not-passed`.
+`boot-not-measured`, `boot-gate-not-passed`.
 
 A local check is only as honest as the kernel and root user it runs under.
 Anything that must hold against the machine's owner needs the remote
@@ -104,7 +99,6 @@ The bundle contains:
 | `ak.pem`, `ak.name` | Attestation key (ECC P-256, persistent handle `0x81000b10`) |
 | `quote.msg`, `quote.sig`, `quote.pcrs` | `TPM2_Quote` over SHA-256 PCRs 0-15 with the nonce |
 | `tcg-eventlog.bin` | Firmware/shim/GRUB event log (PCRs 0-9, 14) |
-| `ima-log.bin` | IMA binary measurement list (PCR 10) |
 | `systemd-tpm2-measure.log` | systemd's JSON-SEQ event log, holds the PCR 15 events |
 | `status.json` | `blossomos-integrity check --json` at quote time (informational) |
 
@@ -124,8 +118,8 @@ with `TPM2_MakeCredential`; the client answers with
    - PCR 4/9: the loaded kernel and initramfs match `kernels[]` of the image
      attestation below. The initramfs is what enforces everything else.
    - PCR 8: the kernel command line (GRUB records it). Check for
-     `blossomos.integrity=1` and no `lockdown=none`, `ima_policy=`,
-     `init=`, `rd.break` or similar.
+     `blossomos.integrity=1` and no `lockdown=none`, `init=`, `rd.break`
+     or similar.
 4. Replay `systemd-tpm2-measure.log` against PCR 15. BlossomOS writes these
    events, in this order, once per boot:
 
@@ -151,27 +145,18 @@ with `TPM2_MakeCredential`; the client answers with
        registry.blossomos.org/blossom/image@<digest>
    ```
 
-   The predicate's `ima.files.content` is a gzip'd, base64'd `sha256sum`
-   list of every measurable file in `/usr`.
-6. Replay `ima-log.bin` against PCR 10 and check every entry's hash against
-   that list. Anything else (a binary from an unlocked `/usr` overlay,
-   `/var/usrlocal`, `/tmp`, a user's home directory, ...) is code BlossomOS
-   didn't ship; decide per path what is acceptable (a game's own files will
-   show up here too). `CRITICAL_DATA` entries show SELinux being disabled or
-   its policy changing.
+   Its `kernels[]` are the reference values for step 3.
 
 ## Limitations
 
 - `/usr` is not sealed on disk. Root can still unlock or overlay it, or boot
-  a hand-made deployment with a forged origin. That is detected, not
-  prevented: the initramfs records the deployment's real state, and IMA
-  records whatever code actually runs. Preventing it outright needs sealed
-  composefs images (UKI with the composefs digest, systemd-boot), which
-  requires a reinstall.
-- Files that are read rather than executed (configuration, Python modules,
-  game data) are not measured.
-- `/etc` is writable by root. Its effect on executed code shows up in the IMA
-  log (e.g. `/etc/ld.so.preload`), but configuration changes do not.
+  a hand-made deployment with a forged origin. A deployment modified before
+  boot is detected, since the initramfs records its real state. Changes made
+  after boot (unlocking `/usr`, running code from `/var`, `/tmp` or a home
+  directory) are not measured; the local check sees some of them, a remote
+  verifier sees none. Preventing them outright needs sealed composefs images
+  (UKI with the composefs digest, systemd-boot), which requires a reinstall.
+- `/etc` is writable by root and not measured.
 - The kernel is BlossomOS' own build, signed with BlossomOS' key. A verifier
   has to decide to trust that key; it can't rely on Microsoft's or Fedora's
   signing alone.

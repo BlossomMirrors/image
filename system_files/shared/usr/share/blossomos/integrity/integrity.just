@@ -1,6 +1,6 @@
 export JUST_JUSTFILE := justfile()
 
-# turn on integrity mode (measured boot with IMA, refuses modified systems)
+# turn on integrity mode (refuses to boot modified systems)
 on:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -37,9 +37,7 @@ on:
 
     gum style --border rounded --padding "0 1" \
         "Integrity mode refuses to boot unsigned, unlocked or layered systems," \
-        "and makes the kernel record a hash of every program and library that" \
-        "runs (IMA). That record stays on this machine unless you or software" \
-        "you run hands it to someone, for example a game's anti-cheat."
+        "and locks package layering while it is on."
     gum confirm "Turn on integrity mode?" || exit 0
     sudo rpm-ostree kargs --append-if-missing=blossomos.integrity=1
     sudo blossomos-integrity lock-layering true --reload

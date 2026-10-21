@@ -5,7 +5,6 @@
 # GRUB measures into PCR 9, so a verifier that trusts PCR 9 can trust what this
 # script records. see docs/INTEGRITY.md in the image repository.
 #
-#   ima-policy  (integrity mode only) load the IMA measurement policy
 #   measure     record the deployment about to boot into PCR 15 and, in
 #               integrity mode, refuse to boot anything that isn't an
 #               unmodified, signature-verified BlossomOS image
@@ -25,17 +24,6 @@ log() {
 
 integrity_mode() {
     grep -qw 'blossomos.integrity=1' /proc/cmdline
-}
-
-load_ima_policy() {
-    mkdir -p "${STATE_DIR}"
-    # Writing a path (rather than the rules) makes IMA read the file itself.
-    if echo "${CONF_DIR}/ima-policy" >/sys/kernel/security/ima/policy; then
-        touch "${STATE_DIR}/ima-policy-loaded"
-    else
-        log "failed to load the IMA policy"
-    fi
-    return 0
 }
 
 extend() {
@@ -162,16 +150,12 @@ EOF
 }
 
 case "${1:-}" in
-    ima-policy)
-        integrity_mode && load_ima_policy
-        exit 0
-        ;;
     measure)
         measure
         exit 0
         ;;
     *)
-        echo "usage: $0 ima-policy|measure" >&2
+        echo "usage: $0 measure" >&2
         exit 0
         ;;
 esac

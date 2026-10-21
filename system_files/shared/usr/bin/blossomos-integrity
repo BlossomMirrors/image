@@ -404,12 +404,9 @@ def collect(online=False):
     if preload:
         reasons.append("ld-so-preload")
     report["integrity_mode"] = INTEGRITY_KARG in cmdline()
-    report["ima_policy_loaded"] = os.path.exists(f"{INITRD_STATE_DIR}/ima-policy-loaded")
     report["initrd"] = read_env(f"{INITRD_STATE_DIR}/initrd.env")
     if not report["integrity_mode"]:
         reasons.append("integrity-mode-off")
-    elif not report["ima_policy_loaded"]:
-        reasons.append("ima-policy-not-loaded")
     initrd = report["initrd"] or {}
     if initrd.get("MEASURED") != "yes":
         reasons.append("boot-not-measured")
@@ -430,7 +427,7 @@ def cmd_check(args):
         print(f"Lockdown:       {report['lockdown']}")
         print(f"TPM:            {report['tpm']}")
         print(f"/usr:           unlocked={report['usr']['unlocked']} overlay={report['usr']['overlay']}")
-        print(f"Integrity mode: {report['integrity_mode']} (IMA policy loaded: {report['ima_policy_loaded']})")
+        print(f"Integrity mode: {report['integrity_mode']}")
         print(f"Trusted:        {report['trusted']}")
         for r in report["reasons"]:
             print(f"  - {r}")
@@ -583,7 +580,6 @@ def cmd_attest(args):
                    capture_output=True)
     logs = {
         "tcg-eventlog.bin": "/sys/kernel/security/tpm0/binary_bios_measurements",
-        "ima-log.bin": "/sys/kernel/security/ima/binary_runtime_measurements",
         "systemd-tpm2-measure.log": "/run/log/systemd/tpm2-measure.log",
         "initrd.env": f"{INITRD_STATE_DIR}/initrd.env",
     }
