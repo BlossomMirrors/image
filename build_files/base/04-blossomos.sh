@@ -74,6 +74,12 @@ dnf5 download --destdir=/tmp/blossom-xdg-desktop-portal --disablerepo='*' --enab
 dnf5 install -y /tmp/blossom-xdg-desktop-portal/*.rpm
 rm -rf /tmp/blossom-xdg-desktop-portal
 
+# Replace stock plasma-setup with our BlossomOS-patched build
+mkdir -p /tmp/blossom-plasma-setup
+dnf5 download --destdir=/tmp/blossom-plasma-setup --disablerepo='*' --enablerepo="${REPO_ID}" plasma-setup
+dnf5 install -y /tmp/blossom-plasma-setup/*.rpm
+rm -rf /tmp/blossom-plasma-setup
+
 # Overlay our BlossomOS-patched Session KCM on the stock plasma-desktop, so it can pick BlossomOS Recovery for the next restart (with blossom-recovery's units and polkit rule).
 # Its files are also owned by plasma-desktop and dnf5 has no --replacefiles flag, so install via rpm directly
 mkdir -p /tmp/blossom-kcm-smserver
