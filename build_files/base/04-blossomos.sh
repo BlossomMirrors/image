@@ -30,6 +30,7 @@ dnf5 -y install \
     blossom-plymouth-theme \
     blossom-kcm-software-update \
     blossom-kcm-help-support \
+    driveman \
     blossom-recovery \
     blossom-p2pupdated \
     blossom-welcome \
