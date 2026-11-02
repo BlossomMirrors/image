@@ -1,0 +1,128 @@
+#!/usr/bin/bash
+# Keep bulky, easily re-downloaded data out of the /var/home snapper
+# snapshots (see blossomos-snapper-setup).
+#
+# Snapper has no exclude list: a btrfs snapshot simply stops at nested
+# subvolumes, which show up as empty directories inside the snapshot. So
+# every excluded path is turned into its own subvolume, per user. Otherwise
+# a snapshot pins every game or container layer that was ever deleted or
+# updated since, which is what fills up disks.
+#
+# Runs at boot before anyone can log in, so nothing has the files open while
+# a plain directory is swapped for a subvolume. The swap copies with
+# reflinks, which only writes metadata and is quick even for big libraries.
+set -uo pipefail
+
+HOME_ROOT=/var/home
+
+# Relative to each user's home directory
+EXCLUDES=(
+    .var/app/com.valvesoftware.Steam
+    .local/share/containers
+)
+
+NEW_SUFFIX=.blossomos-subvol-new
+OLD_SUFFIX=.blossomos-subvol-old
+
+log() { echo "$*"; }
+
+is_btrfs() { [[ "$(stat -f -c %T "$1" 2>/dev/null)" == "btrfs" ]]; }
+
+# The root directory of a btrfs subvolume always has inode 256
+is_subvolume() { is_btrfs "$1" && [[ "$(stat -c %i "$1" 2>/dev/null)" == 256 ]]; }
+
+# Create missing parents owned by the user, so e.g. ~/.local isn't left
+# owned by root when the user has never run anything that created it.
+make_parents() {
+    local home=$1 rel=$2 owner=$3 dir part
+    dir=$home
+    IFS=/ read -ra parts <<<"${rel%/*}"
+    for part in "${parts[@]}"; do
+        dir+=/$part
+        [[ -L "$dir" ]] && return 1
+        if [[ ! -d "$dir" ]]; then
+            install -d -o "${owner%:*}" -g "${owner#*:}" -m 0755 "$dir" || return 1
+        fi
+    done
+}
+
+convert() {
+    local home=$1 rel=$2 owner path new old
+    path=$home/$rel
+    new=$path$NEW_SUFFIX
+    old=$path$OLD_SUFFIX
+    owner=$(stat -c %u:%g "$home") || return 1
+
+    # Leftovers from an interrupted run. A subvolume already in place means
+    # the swap went through and only the old copy remains to be removed.
+    if [[ -e "$new" ]]; then
+        btrfs subvolume delete "$new" &>/dev/null || rm -rf --one-file-system "$new"
+    fi
+    if [[ -e "$old" ]]; then
+        if is_subvolume "$path"; then
+            rm -rf --one-file-system "$old"
+        elif [[ ! -e "$path" ]]; then
+            mv "$old" "$path" || return 1
+        fi
+    fi
+    # Both a directory and an old copy: don't guess which one is current.
+    [[ -e "$old" ]] && return 1
+
+    # Symlinks point elsewhere (often another disk); leave them alone.
+    [[ -L "$path" ]] && return 0
+    is_subvolume "$path" && return 0
+
+    make_parents "$home" "$rel" "$owner" || return 0
+    is_btrfs "${path%/*}" || return 0
+
+    # Nothing there yet: create an empty subvolume for the app to fill.
+    if [[ ! -e "$path" ]]; then
+        btrfs subvolume create "$path" >/dev/null || return 1
+        chown "$owner" "$path"
+        chmod 0700 "$path"
+        restorecon "$path" &>/dev/null || true
+        log "created subvolume $path"
+        return 0
+    fi
+
+    [[ -d "$path" ]] || return 0
+
+    # cp can't recreate nested subvolumes (e.g. podman's btrfs storage
+    # driver), and the old copy couldn't be removed afterwards either.
+    if [[ -n "$(find "$path" -mindepth 1 -type d -inum 256 -print -quit 2>/dev/null)" ]]; then
+        log "$path contains subvolumes, not moving it"
+        return 0
+    fi
+
+    btrfs subvolume create "$new" >/dev/null || return 1
+    if ! cp -a --reflink=always "$path/." "$new/"; then
+        log "copying $path into a subvolume failed, leaving it as is"
+        btrfs subvolume delete "$new" &>/dev/null || rm -rf --one-file-system "$new"
+        return 1
+    fi
+    chown --reference="$path" "$new"
+    chmod --reference="$path" "$new"
+    chcon --reference="$path" "$new" &>/dev/null || true
+
+    mv "$path" "$old" || return 1
+    if ! mv "$new" "$path"; then
+        mv "$old" "$path"
+        return 1
+    fi
+    rm -rf --one-file-system "$old"
+    log "moved $path into its own subvolume"
+}
+
+is_btrfs "$HOME_ROOT" || exit 0
+
+for home in "$HOME_ROOT"/*/; do
+    home=${home%/}
+    [[ -d "$home" && ! -L "$home" ]] || continue
+    # Only real accounts, not stray directories
+    [[ "$(stat -c %u "$home")" -ge 1000 ]] || continue
+    for rel in "${EXCLUDES[@]}"; do
+        convert "$home" "$rel" || log "could not exclude $home/$rel from snapshots"
+    done
+done
+
+exit 0

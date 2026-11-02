@@ -164,6 +164,19 @@ sed -i \
 # The setuid bit lets split tunneling work for unprivileged users.
 chmod u+s /usr/bin/mullvad-exclude
 
+# upterm for sharing a terminal for remote help, also in the recovery
+# environment (its overlay is built from this image's files). The release
+# RPM is unsigned, so pin its checksum.
+UPTERM_VERSION=0.41.0
+UPTERM_SHA256=e46efd58badd255fbfdbb3097b8345740f26dd150845394a6ef5f037aaac347f
+echo "Installing upterm ${UPTERM_VERSION}..."
+mkdir -p /tmp/upterm
+curl --retry 3 -fsSLo /tmp/upterm/upterm.rpm \
+    "https://github.com/owenthereal/upterm/releases/download/v${UPTERM_VERSION}/upterm_linux_amd64.rpm"
+echo "${UPTERM_SHA256}  /tmp/upterm/upterm.rpm" | sha256sum -c -
+dnf5 -y install /tmp/upterm/upterm.rpm
+rm -rf /tmp/upterm
+
 # Remove foot .desktop files
 rm -f /usr/share/applications/foot-server.desktop
 rm -f /usr/share/applications/foot.desktop

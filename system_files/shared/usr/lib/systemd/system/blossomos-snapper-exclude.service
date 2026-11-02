@@ -1,0 +1,21 @@
+[Unit]
+Description=BlossomOS Exclude Steam And Containers From Home Snapshots
+Documentation=file:/usr/libexec/blossomos/snapper-exclude
+# Swaps directories for subvolumes, so it has to finish before anyone can
+# log in and open the files. A no-op once every user's paths are converted.
+DefaultDependencies=no
+RequiresMountsFor=/var/home
+After=local-fs.target blossomos-diskspace-guard.service
+Before=systemd-user-sessions.service display-manager.service plasmalogin.service
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/libexec/blossomos/snapper-exclude
+# Never let a problem in here hold up or fail the boot
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target
