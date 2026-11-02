@@ -19,5 +19,12 @@
     "reboot-now": "Jetzt neu starten",
     "later": "Später",
     "failed": "Der Wechsel zum {wanted}-Image ist fehlgeschlagen:"
+  },
+  "diskspace": {
+    "intro": "Dein Datenträger war beim Start des Computers voll. BlossomOS hat etwas Notfall-Speicherplatz freigegeben, damit du dich anmelden kannst, aber er wird bald wieder knapp.\n\nBitte lösche oder verschiebe Dateien, die du nicht mehr brauchst, und starte neu, sobald ein paar Gigabyte frei sind.",
+    "snapshots": "Um Platz zu schaffen, mussten {count} der ältesten automatischen Schnappschüsse deines Benutzerordners entfernt werden.",
+    "free": "Derzeit freier Speicherplatz: {free}",
+    "open": "Große Dateien finden",
+    "later": "Später"
   }
 }

@@ -1,0 +1,22 @@
+[Unit]
+Description=BlossomOS Free Up Space On A Full Disk
+Documentation=file:/usr/libexec/blossomos/diskspace-guard
+# Runs right after /var and /var/home are mounted, before anything that
+# writes there during startup. A no-op unless the disk is nearly full.
+DefaultDependencies=no
+RequiresMountsFor=/var /var/home
+After=local-fs.target
+Before=sysinit.target systemd-tmpfiles-setup.service
+Before=systemd-user-sessions.service display-manager.service plasmalogin.service
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/usr/libexec/blossomos/diskspace-guard boot
+# Never let a problem in here hold up or fail the boot
+TimeoutStartSec=3min
+
+[Install]
+WantedBy=sysinit.target

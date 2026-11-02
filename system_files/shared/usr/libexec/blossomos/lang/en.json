@@ -19,5 +19,12 @@
     "reboot-now": "Reboot now",
     "later": "Later",
     "failed": "Switching to the {wanted} image failed:"
+  },
+  "diskspace": {
+    "intro": "Your disk was full when the computer started. BlossomOS freed up some emergency space so you could log in, but it will run out again soon.\n\nPlease delete or move files you no longer need, then restart once you have a few gigabytes free.",
+    "snapshots": "To make room, {count} of the oldest automatic snapshots of your home folder had to be removed.",
+    "free": "Free space right now: {free}",
+    "open": "Find large files",
+    "later": "Later"
   }
 }

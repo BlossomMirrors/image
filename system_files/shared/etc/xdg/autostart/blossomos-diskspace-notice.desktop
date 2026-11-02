@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BlossomOS Disk Space Notice
+Name[de]=BlossomOS Speicherplatz-Hinweis
+Comment=Tell the user when the disk was full at startup
+Comment[de]=Hinweisen, wenn der Datenträger beim Start voll war
+Exec=/usr/libexec/blossomos/diskspace-notice
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2

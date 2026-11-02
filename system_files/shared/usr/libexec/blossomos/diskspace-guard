@@ -1,0 +1,163 @@
+#!/usr/bin/bash
+# Keep a full disk from making the system unbootable.
+#
+# On BlossomOS the ostree deployments, /etc, /var and /var/home all share one
+# btrfs filesystem. Once it is full, everything that writes during startup
+# (journald, tmpfiles, the /etc merge, plasmalogin, the Plasma session and
+# its caches) fails at the same time, and the user is left with a login loop
+# and no way to clean up from the desktop.
+#
+#   maintain  (blossomos-diskspace-reserve.timer)
+#             Keeps a preallocated reserve file of RESERVE_SIZE on /var while
+#             there is plenty of space. Nothing else ever writes to it, so that
+#             space is guaranteed to still be there when the disk fills up.
+#
+#   boot      (blossomos-diskspace-guard.service, before tmpfiles and the
+#             login manager)
+#             If free space is below CRITICAL, reclaim space in order of how
+#             little it costs the user: throwaway logs/caches, then the
+#             reserve file, then (only if still needed) the oldest automatic
+#             snapper timeline snapshots. User-created snapshots and user
+#             files are never touched. Leaves a flag in /run so
+#             diskspace-notice can tell the user after login.
+#
+# The reserve file can also be deleted by hand from a recovery shell:
+#   rm /var/lib/blossomos/reserve/emergency-space
+set -uo pipefail
+
+RESERVE_DIR=/var/lib/blossomos/reserve
+RESERVE_FILE="$RESERVE_DIR/emergency-space"
+RESERVE_SIZE=$((1024 * 1024 * 1024))   # 1 GiB
+CRITICAL=$((1024 * 1024 * 1024))       # boot cleanup kicks in below 1 GiB free
+HEALTHY=$((5 * 1024 * 1024 * 1024))    # only (re)create the reserve with 5 GiB to spare
+FLAG=/run/blossomos/diskspace-emergency
+
+log() { echo "blossomos-diskspace: $*"; }
+
+avail() { df -B1 --output=avail /var 2>/dev/null | tail -n1 | tr -d ' '; }
+
+human() { numfmt --to=iec-i --suffix=B "$1" 2>/dev/null || echo "$1 bytes"; }
+
+enough() { (( $(avail) >= CRITICAL )); }
+
+# btrfs frees space on transaction commit, so force one before re-measuring
+commit() { btrfs filesystem sync /var &>/dev/null || sync -f /var; }
+
+boot_msg() {
+    command -v plymouth &>/dev/null && plymouth --ping 2>/dev/null &&
+        plymouth display-message --text="$1" 2>/dev/null
+    return 0
+}
+
+reserve_ok() { [[ -f "$RESERVE_FILE" ]] && (( $(stat -c %s "$RESERVE_FILE") == RESERVE_SIZE )); }
+
+maintain() {
+    if reserve_ok; then
+        exit 0
+    fi
+    local free
+    free=$(avail)
+    if (( free < HEALTHY + RESERVE_SIZE )); then
+        log "only $(human "$free") free, not recreating the reserve yet"
+        exit 0
+    fi
+
+    mkdir -p "$RESERVE_DIR"
+    chmod 0700 "$RESERVE_DIR"
+    # NOCOW so the preallocated extents stay ours and never get rewritten.
+    # Has to be set on the directory before the file exists; harmless no-op
+    # (and failure) on filesystems without CoW.
+    chattr +C "$RESERVE_DIR" 2>/dev/null || true
+
+    local tmp="$RESERVE_FILE.tmp"
+    rm -f "$tmp"
+    if ! fallocate -l "$RESERVE_SIZE" "$tmp"; then
+        # fallocate isn't supported everywhere, fall back to writing it out
+        rm -f "$tmp"
+        if ! head -c "$RESERVE_SIZE" /dev/zero >"$tmp"; then
+            rm -f "$tmp"
+            log "could not create the reserve file"
+            exit 1
+        fi
+    fi
+    chmod 0600 "$tmp"
+    mv -f "$tmp" "$RESERVE_FILE"
+    log "reserved $(human "$RESERVE_SIZE") of emergency disk space in $RESERVE_FILE"
+}
+
+# Oldest-first automatic timeline snapshots, as "config number" pairs.
+# Snapshot 0 is the live filesystem, and anything not created by the timeline
+# (manual snapshots, pre/post pairs) is left alone.
+timeline_snapshots() {
+    local cfg
+    for cfg in /etc/snapper/configs/*; do
+        [[ -f "$cfg" ]] || continue
+        cfg=${cfg##*/}
+        snapper --no-dbus --csvout --no-headers -c "$cfg" list --columns number,cleanup 2>/dev/null |
+            awk -F, -v c="$cfg" '$1 != 0 && $2 == "timeline" { print c, $1 }'
+    done | sort -k2,2n
+}
+
+boot() {
+    local free
+    free=$(avail)
+    [[ -n "$free" ]] || exit 0
+    if (( free >= CRITICAL )); then
+        exit 0
+    fi
+
+    log "only $(human "$free") free on /var at boot, reclaiming space"
+    boot_msg "Disk is full, freeing up space…"
+    mkdir -p "${FLAG%/*}"
+    local snapshots=0 reserve=0
+
+    # 1. Things nobody will miss
+    journalctl --vacuum-size=64M &>/dev/null || true
+    rm -rf /var/lib/systemd/coredump/* 2>/dev/null
+    find /var/tmp -mindepth 1 -maxdepth 1 -name 'flatpak-cache-*' -exec rm -rf {} + 2>/dev/null
+    commit
+
+    # 2. The reserve that exists for exactly this moment
+    if ! enough && [[ -e "$RESERVE_FILE" ]]; then
+        rm -f "$RESERVE_FILE" "$RESERVE_FILE.tmp"
+        reserve=1
+        commit
+        log "released the emergency reserve"
+    fi
+
+    # 3. Oldest automatic snapshots of /var/home, one at a time. These hold
+    #    on to every file deleted since they were taken, which is usually
+    #    what makes a disk stay full after the user already cleaned up.
+    if ! enough && command -v snapper &>/dev/null; then
+        local cfg num
+        while read -r cfg num; do
+            enough && break
+            if snapper --no-dbus -c "$cfg" delete --sync "$num" &>/dev/null; then
+                snapshots=$((snapshots + 1))
+                log "deleted timeline snapshot $num of snapper config $cfg"
+            fi
+        done < <(timeline_snapshots)
+    fi
+
+    # Hand emptied data chunks back to the unallocated pool so btrfs can
+    # grow its metadata again. Quick, since it only touches empty chunks.
+    timeout 60 btrfs balance start -dusage=0 /var &>/dev/null || true
+
+    free=$(avail)
+    printf 'reserve=%s\nsnapshots=%s\nfree=%s\n' "$reserve" "$snapshots" "$free" >"$FLAG"
+    if enough; then
+        log "$(human "$free") free after cleanup"
+    else
+        log "still only $(human "$free") free after cleanup, user files need to be removed"
+    fi
+    boot_msg ""
+}
+
+case "${1:-}" in
+    boot) boot ;;
+    maintain) maintain ;;
+    *)
+        echo "usage: $0 boot|maintain" >&2
+        exit 2
+        ;;
+esac

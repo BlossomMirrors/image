@@ -1,0 +1,49 @@
+#!/usr/bin/bash
+# Shown after login when blossomos-diskspace-guard had to free up space during
+# startup, so the user knows why and gets a direct way to clean up.
+set -euo pipefail
+
+FLAG=/run/blossomos/diskspace-emergency
+SHOWN="${XDG_RUNTIME_DIR:-/tmp}/blossomos-diskspace-notice-shown"
+LANG_DIR="/usr/libexec/blossomos/lang"
+TITLE="BlossomOS"
+
+[[ -r "$FLAG" ]] || exit 0
+[[ -e "$SHOWN" ]] && exit 0
+command -v kdialog &>/dev/null || exit 0
+: >"$SHOWN"
+
+locale="${LANGUAGE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}}}"
+locale="${locale%%:*}"
+locale="${locale%%[_.@]*}"
+LANG_FILE="$LANG_DIR/$locale.json"
+[[ -r "$LANG_FILE" ]] || LANG_FILE="$LANG_DIR/en.json"
+
+t() {
+    local key=$1
+    shift
+    jq -nr --arg k "$key" \
+        --slurpfile l "$LANG_FILE" --slurpfile f "$LANG_DIR/en.json" '
+        ($k | split(".")) as $p
+        | ($l[0] | getpath($p)) // ($f[0] | getpath($p)) // $k
+        | reduce ($ARGS.positional[] | capture("^(?<n>[^=]+)=(?<v>.*)$"; "s")) as $a
+            (.; split("{" + $a.n + "}") | join($a.v))' --args "$@"
+}
+
+snapshots=$(sed -n 's/^snapshots=//p' "$FLAG")
+free=$(df -h --output=avail "$HOME" | tail -n1 | tr -d ' ')
+
+msg="$(t diskspace.intro)"
+if [[ "${snapshots:-0}" -gt 0 ]]; then
+    msg+=$'\n\n'"$(t diskspace.snapshots "count=$snapshots")"
+fi
+msg+=$'\n\n'"$(t diskspace.free "free=$free")"
+
+if command -v filelight &>/dev/null; then
+    if kdialog --title "$TITLE" --warningyesno "$msg" \
+        --yes-label "$(t diskspace.open)" --no-label "$(t diskspace.later)"; then
+        exec filelight "$HOME"
+    fi
+else
+    kdialog --title "$TITLE" --sorry "$msg"
+fi
