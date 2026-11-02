@@ -50,8 +50,7 @@ systemctl enable cups-browsed.service
 
 # dmem cgroup VRAM prioritization for foreground apps (games). No-op without
 # a kernel that supports the dmem cgroup controller, see kernel-blossomos'
-# cachyos patchset. plasma-foreground-booster.service has no [Install]
-# section; it's autostarted via its KDE autostart .desktop entry instead.
+# cachyos patchset.
 systemctl enable dmemcg-booster-system.service
 systemctl --global enable dmemcg-booster-user.service
 
