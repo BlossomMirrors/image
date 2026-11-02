@@ -30,7 +30,8 @@ systemctl enable blossomos-grub-migrate.service
 systemctl enable blossomos-firewall-migrate.service
 systemctl enable ufw.service
 systemctl enable blossomos-snapper-setup.service
-systemctl enable blossomos-recovery-sync.service
+systemctl disable blossomos-recovery-sync.service
+systemctl enable blossomos-recovery-sync.timer
 systemctl enable blossomos-recovery-sync.path
 systemctl enable blossomos-recovery-boot-ok.service
 systemctl enable snapper-timeline.timer
@@ -58,11 +59,22 @@ systemctl enable flatpak-nuke-fedora.service
 # Nothing on this image otherwise runs `flatpak preinstall`, so
 # packages.flatpak's preinstall.d entries would never reach machines that
 # were already provisioned before an entry was added
-systemctl enable flatpak-preinstall.service
+# Keep network downloads off the path to graphical.target. Disable the old
+# service links as well, so the image does not retain direct boot activation.
+systemctl disable flatpak-preinstall.service
+systemctl enable flatpak-preinstall.timer
+
+# Fedora's atomic desktop preset enables these expensive cache refreshes at
+# every boot. Keep the refreshes, but run them after startup instead.
+systemctl disable fedora-atomic-desktop-appstream-cache-refresh.service
+systemctl disable fedora-atomic-desktop-mandb-update.service
+systemctl enable fedora-atomic-desktop-appstream-cache-refresh.timer
+systemctl enable fedora-atomic-desktop-mandb-update.timer
 
 # org.kde.KStyle.BlossomUI needs all three of its branches installed at
 # once, which preinstall.d can't express (one branch per app id)
-systemctl enable blossomos-flatpak-kstyle-branches.service
+systemctl disable blossomos-flatpak-kstyle-branches.service
+systemctl enable blossomos-flatpak-kstyle-branches.timer
 
 # disable sunshine service
 systemctl --global disable app-dev.lizardbyte.app.Sunshine.service

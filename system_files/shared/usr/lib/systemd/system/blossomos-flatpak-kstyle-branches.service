@@ -1,11 +1,8 @@
 [Unit]
 Description=Install all org.kde.KStyle.BlossomUI branches
-After=network-online.target
+After=network-online.target flatpak-preinstall.service
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 ExecStart=/usr/libexec/blossomos-flatpak-kstyle-branches
-
-[Install]
-WantedBy=multi-user.target

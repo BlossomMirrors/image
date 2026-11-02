@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh Atomic Desktop AppStream cache after startup
+
+[Timer]
+OnBootSec=3min
+
+[Install]
+WantedBy=timers.target

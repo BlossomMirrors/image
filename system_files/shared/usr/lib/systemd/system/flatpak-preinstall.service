@@ -6,6 +6,3 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/flatpak preinstall --system -y --noninteractive
-
-[Install]
-WantedBy=multi-user.target

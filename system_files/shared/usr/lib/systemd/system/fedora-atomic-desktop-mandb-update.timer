@@ -1,0 +1,8 @@
+[Unit]
+Description=Update Atomic Desktop manual page cache after startup
+
+[Timer]
+OnBootSec=4min
+
+[Install]
+WantedBy=timers.target

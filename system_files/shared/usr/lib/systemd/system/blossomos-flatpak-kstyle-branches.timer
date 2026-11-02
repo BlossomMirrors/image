@@ -1,0 +1,8 @@
+[Unit]
+Description=Install BlossomUI Flatpak theme branches after startup
+
+[Timer]
+OnBootSec=2min
+
+[Install]
+WantedBy=timers.target
