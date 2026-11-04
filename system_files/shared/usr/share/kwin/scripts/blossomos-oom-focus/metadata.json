@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Description": "Let the out-of-memory killer close unfocused apps before the focused one",
+        "EnabledByDefault": true,
+        "Icon": "preferences-system-windows-script-test",
+        "Id": "blossomos-oom-focus",
+        "License": "Apache-2.0",
+        "Name": "Protect Focused App from OOM"
+    },
+    "X-Plasma-API": "javascript"
+}

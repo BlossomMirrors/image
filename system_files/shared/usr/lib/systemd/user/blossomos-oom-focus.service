@@ -1,0 +1,10 @@
+[Unit]
+Description=Make the OOM killer prefer unfocused apps
+PartOf=graphical-session.target
+
+[Service]
+Type=dbus
+BusName=org.blossomos.OomFocus
+ExecStart=/usr/libexec/blossomos/oom-focus
+Restart=on-failure
+Slice=session.slice

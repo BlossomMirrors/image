@@ -18,7 +18,9 @@ systemctl disable mullvad-early-boot-blocking.service
 # systemd-oomd's default cgroup pressure thresholds kill foreground apps
 # (Plasma, browser tabs) too eagerly under memory pressure before MGLRU's
 # working-set protection gets a chance to help. Disable it; the kernel's own
-# OOM killer remains as the last resort.
+# OOM killer remains as the last resort. The blossomos-oom-focus KWin script
+# and its D-Bus activated daemon (/usr/libexec/blossomos/oom-focus) raise the
+# oom_score_adj of unfocused app windows so that one picks those first.
 systemctl disable systemd-oomd.service
 systemctl disable systemd-oomd.socket
 # Speed up systemd startup by disabling NetworkManager-wait-online.service

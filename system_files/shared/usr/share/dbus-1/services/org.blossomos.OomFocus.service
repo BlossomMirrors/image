@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.blossomos.OomFocus
+Exec=/usr/libexec/blossomos/oom-focus
+SystemdService=blossomos-oom-focus.service

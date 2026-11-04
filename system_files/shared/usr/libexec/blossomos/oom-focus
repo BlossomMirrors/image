@@ -1,0 +1,204 @@
+#!/usr/bin/python3
+# Make the kernel OOM killer pick unfocused apps first.
+#
+# systemd-oomd is disabled on BlossomOS (see 17-cleanup.sh), so the kernel
+# OOM killer is the only thing that acts under memory pressure. It picks the
+# process with the highest oom_score, which is mostly its memory footprint,
+# and that is usually the app the user is looking at (the game, the browser).
+#
+# The blossomos-oom-focus KWin script tells this daemon which window is
+# active and which processes own windows. Every app cgroup under app.slice
+# that owns a window but isn't focused gets PENALTY added to the
+# oom_score_adj of all its processes; the focused one is put back to the
+# value it had before. Background services without windows and the Plasma
+# session itself (session.slice) are left alone.
+#
+# Raising oom_score_adj needs no privileges, and lowering it back is allowed
+# down to the oom_score_adj_min systemd set for the session, which is the
+# value we restore to.
+
+import os
+import sys
+
+from gi.repository import Gio, GLib
+
+BUS_NAME = "org.blossomos.OomFocus"
+OBJECT_PATH = "/org/blossomos/OomFocus"
+PENALTY = 500
+# New processes (browser tabs, game launchers) inherit the adj of their
+# parent, but forked children of a focused app may appear in an unfocused
+# cgroup's scope later, so the penalty is re-applied periodically.
+REAPPLY_SECONDS = 5
+
+INTROSPECTION = """
+<node>
+  <interface name="org.blossomos.OomFocus">
+    <method name="Update">
+      <arg type="s" name="active_pid" direction="in"/>
+      <arg type="s" name="window_pids" direction="in"/>
+    </method>
+  </interface>
+</node>
+"""
+
+CGROUP_ROOT = "/sys/fs/cgroup"
+
+
+def read_adj(pid):
+    try:
+        with open(f"/proc/{pid}/oom_score_adj") as f:
+            return int(f.read())
+    except (OSError, ValueError):
+        return None
+
+
+def write_adj(pid, value):
+    try:
+        with open(f"/proc/{pid}/oom_score_adj", "w") as f:
+            f.write(str(value))
+    except OSError:
+        pass
+
+
+def app_cgroup(pid):
+    """The app.slice child cgroup a process lives in, or None."""
+    try:
+        with open(f"/proc/{pid}/cgroup") as f:
+            for line in f:
+                if line.startswith("0::"):
+                    path = line[3:].strip()
+                    break
+            else:
+                return None
+    except OSError:
+        return None
+    parts = path.split("/")
+    try:
+        i = parts.index("app.slice")
+    except ValueError:
+        return None
+    if i + 1 >= len(parts):
+        return None
+    return "/".join(parts[: i + 2])
+
+
+def cgroup_pids(cgroup):
+    pids = []
+    for dirpath, _, files in os.walk(CGROUP_ROOT + cgroup):
+        if "cgroup.procs" not in files:
+            continue
+        try:
+            with open(os.path.join(dirpath, "cgroup.procs")) as f:
+                pids.extend(int(p) for p in f.read().split())
+        except (OSError, ValueError):
+            pass
+    return pids
+
+
+class OomFocus:
+    def __init__(self):
+        # The daemon runs in the same user manager as the apps, so its own
+        # adj is the session default to fall back to for unknown processes.
+        self.default_adj = read_adj(os.getpid()) or 0
+        self.baseline = {}  # pid -> adj before we penalized it
+        self.focused = None  # cgroup
+        self.windowed = set()  # cgroups
+
+    def update(self, active_pid, window_pids):
+        windowed = set()
+        for pid in window_pids:
+            cg = app_cgroup(pid)
+            if cg:
+                windowed.add(cg)
+        focused = app_cgroup(active_pid) if active_pid > 0 else None
+        # Focus moved to the desktop, a panel or another non-app window:
+        # keep protecting the app that was focused last.
+        if focused is None and self.focused in windowed:
+            focused = self.focused
+        # Cgroups that lost their last window go back to normal.
+        for cg in self.windowed - windowed:
+            self.restore(cg)
+        self.focused = focused
+        self.windowed = windowed
+        self.apply()
+
+    def restore(self, cgroup):
+        for pid in cgroup_pids(cgroup):
+            base = self.baseline.pop(pid, None)
+            if base is None:
+                adj = read_adj(pid)
+                if adj is None or adj < self.default_adj + PENALTY:
+                    continue
+                base = self.default_adj
+            write_adj(pid, base)
+
+    def apply(self):
+        if self.focused:
+            self.restore(self.focused)
+        for cg in self.windowed:
+            if cg == self.focused:
+                continue
+            for pid in cgroup_pids(cg):
+                if pid in self.baseline:
+                    continue
+                adj = read_adj(pid)
+                if adj is None:
+                    continue
+                if adj >= self.default_adj + PENALTY:
+                    # Inherited from an already penalized parent.
+                    self.baseline[pid] = self.default_adj
+                    continue
+                self.baseline[pid] = adj
+                write_adj(pid, min(adj + PENALTY, 1000))
+        # Forget processes that are gone.
+        self.baseline = {
+            pid: adj for pid, adj in self.baseline.items()
+            if os.path.exists(f"/proc/{pid}")
+        }
+
+    def tick(self):
+        self.apply()
+        return True
+
+
+def parse_pid(value):
+    try:
+        return int(value)
+    except ValueError:
+        return 0
+
+
+def main():
+    state = OomFocus()
+    node = Gio.DBusNodeInfo.new_for_xml(INTROSPECTION)
+
+    def on_call(conn, sender, path, iface, method, params, invocation):
+        if method == "Update":
+            active, pids = params.unpack()
+            state.update(
+                parse_pid(active),
+                [p for p in (parse_pid(x) for x in pids.split(",")) if p > 0],
+            )
+        invocation.return_value(None)
+
+    def on_bus(conn, name):
+        conn.register_object_with_closures2(
+            OBJECT_PATH, node.interfaces[0], on_call, None, None
+        )
+
+    loop = GLib.MainLoop()
+    Gio.bus_own_name(
+        Gio.BusType.SESSION,
+        BUS_NAME,
+        Gio.BusNameOwnerFlags.NONE,
+        on_bus,
+        None,
+        lambda *_: loop.quit(),
+    )
+    GLib.timeout_add_seconds(REAPPLY_SECONDS, state.tick)
+    loop.run()
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
