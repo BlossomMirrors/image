@@ -53,12 +53,6 @@ plymouth-set-default-theme blossom
 # Replace stock kinfocenter with our BlossomOS-patched build
 blossom_replace_pkg kinfocenter
 
-# Replace stock kaccounts-integration with our BlossomOS-patched build
-blossom_replace_pkg kaccounts-integration
-
-# Replace stock kaccounts-providers with our BlossomOS-patched build
-blossom_replace_pkg kaccounts-providers
-
 # Replace stock xdg-desktop-portal with our BlossomOS-patched build, so files opened from sandboxed apps (e.g. Helium) reach flatpaks with sub id desktop files like org.libreoffice.LibreOffice.writer
 blossom_replace_pkg xdg-desktop-portal
 
