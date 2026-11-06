@@ -2,7 +2,7 @@
 
 echo "::group:: ===$(basename "$0")==="
 
-set -ouex pipefail
+set -euo pipefail
 
 #shellcheck source=build_files/shared/blossom-repo.sh
 source /ctx/build_files/shared/blossom-repo.sh
