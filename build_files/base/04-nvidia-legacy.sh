@@ -47,6 +47,9 @@ DRIVER_VERSION="$(dnf5 info akmod-nvidia | grep -E '^Version|^Release' | awk '{p
 # explicit akmods build below.
 dnf5 -y install "akmod-nvidia-${DRIVER_VERSION}" || true
 
+# The 580 branch must build proprietary modules for Maxwell, Pascal and Volta.
+sed -i 's/^MODULE_VARIANT=.*/MODULE_VARIANT=kernel/' /etc/nvidia/kernel.conf
+
 # Our own kernel, not the running container host's. The 580 branch's
 # akmod-nvidia has no open kernel module sources (Maxwell/Pascal/Volta don't
 # support them), so this always builds the proprietary modules.
@@ -74,7 +77,12 @@ copr_install_isolated "ublue-os/staging" supergfxctl
 # akmods registers it under a kernel-embedded name like
 # kmod-nvidia-${KERNEL_UNAME_R}, not the bare name.
 KMOD_VERSION="$(modinfo -F version /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
+KMOD_LICENSE="$(modinfo -F license /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
 NVIDIA_DRIVER_VERSION="$(rpm -q --queryformat '%{VERSION}' nvidia-driver)"
+if [[ "${KMOD_LICENSE}" != "NVIDIA" ]]; then
+    echo "Error: expected the proprietary NVIDIA kmod, got license ${KMOD_LICENSE}"
+    exit 1
+fi
 if [[ "${KMOD_VERSION}" != "${NVIDIA_DRIVER_VERSION}" ]]; then
     echo "Error: kmod-nvidia version (${KMOD_VERSION}) does not match nvidia-driver version (${NVIDIA_DRIVER_VERSION})"
     exit 1
@@ -83,6 +91,9 @@ fi
 dnf5 config-manager setopt fedora-nvidia-580.enabled=0 nvidia-container-toolkit.enabled=0
 
 semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
+
+# Put the KMS option where dracut reads it when composing the initramfs.
+install -Dm0644 /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/nvidia-modeset.conf
 
 # force driver load to fix black screen on boot for nvidia desktops, and
 # pre-load intel/amd iGPU else chromium web browsers fail to use hardware
