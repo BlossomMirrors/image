@@ -51,10 +51,6 @@ dnf5 -y install \
     egl-wayland \
     libva-nvidia-driver
 
-# BASE_IMAGE_NAME is always kinoite here; supergfxctl is ublue-os/staging's
-# hybrid GPU switching daemon for kinoite/silverblue.
-copr_install_isolated "ublue-os/staging" supergfxctl
-
 # Read straight from the built module rather than `rpm -q kmod-nvidia`:
 # akmods registers it under a kernel-embedded name like
 # kmod-nvidia-${KERNEL_UNAME_R}, not the bare name.
