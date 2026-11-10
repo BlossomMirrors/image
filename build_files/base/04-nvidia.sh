@@ -31,9 +31,6 @@ DRIVER_VERSION="$(dnf5 info akmod-nvidia | grep -E '^Version|^Release' | awk '{p
 # explicit akmods build below.
 dnf5 -y install "akmod-nvidia-${DRIVER_VERSION}" || true
 
-# negativo17 selects the source tree through kernel.conf during akmods build.
-sed -i 's/^MODULE_VARIANT=.*/MODULE_VARIANT=kernel-open/' /etc/nvidia/kernel.conf
-
 # Our own kernel, not the running container host's. akmod-nvidia builds the
 # open kernel modules (vs. proprietary) when KERNEL_MODULE_TYPE=open, same
 # as ublue-os/akmods' own build script for this exact package.
@@ -78,7 +75,11 @@ dnf5 config-manager setopt fedora-nvidia*.enabled=0 nvidia-container-toolkit.ena
 semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
 
 # Put the KMS option where dracut reads it when composing the initramfs.
-install -Dm0644 /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/nvidia-modeset.conf
+# negativo17 dropped this file from the 615+ branches (modeset defaults to
+# on there, and nvidia-drm.modeset=1 is set via kargs below anyway).
+if [[ -f /etc/modprobe.d/nvidia-modeset.conf ]]; then
+    install -Dm0644 /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/nvidia-modeset.conf
+fi
 
 # force driver load to fix black screen on boot for nvidia desktops, and
 # pre-load intel/amd iGPU else chromium web browsers fail to use hardware

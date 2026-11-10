@@ -47,9 +47,6 @@ DRIVER_VERSION="$(dnf5 info akmod-nvidia | grep -E '^Version|^Release' | awk '{p
 # explicit akmods build below.
 dnf5 -y install "akmod-nvidia-${DRIVER_VERSION}" || true
 
-# The 580 branch must build proprietary modules for Maxwell, Pascal and Volta.
-sed -i 's/^MODULE_VARIANT=.*/MODULE_VARIANT=kernel/' /etc/nvidia/kernel.conf
-
 # Our own kernel, not the running container host's. The 580 branch's
 # akmod-nvidia has no open kernel module sources (Maxwell/Pascal/Volta don't
 # support them), so this always builds the proprietary modules.
