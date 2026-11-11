@@ -29,6 +29,11 @@ gpgcheck=1
 gpgkey=https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
 enabled_metadata=1
 metadata_expire=6h
+# fedora-multimedia (negativo17, enabled at priority=90 in 01-packages.sh)
+# also ships akmod-nvidia/nvidia-driver from the newest branch, which no
+# longer supports these GPUs. Outrank it so every nvidia package resolves
+# from the 580 branch instead.
+priority=80
 type=rpm-md
 repo_gpgcheck=0
 EOF
@@ -39,7 +44,11 @@ dnf5 config-manager setopt fedora-nvidia.enabled=0 fedora-nvidia-580.enabled=1 n
 
 # Pin an exact NVR so the akmod and the userspace driver below resolve to
 # the same release even if negativo17 publishes a new build mid-transaction.
-DRIVER_VERSION="$(dnf5 info akmod-nvidia | grep -E '^Version|^Release' | awk '{print $3}' | xargs | sed 's/ /-/')"
+DRIVER_VERSION="$(dnf5 -q repoquery --repo=fedora-nvidia-580 --latest-limit=1 --queryformat '%{version}-%{release}' akmod-nvidia)"
+if [[ "${DRIVER_VERSION}" != 580.* ]]; then
+    echo "Error: expected a 580 akmod-nvidia from fedora-nvidia-580, got '${DRIVER_VERSION}'"
+    exit 1
+fi
 # akmod-nvidia's own %post always tries (and, as root inside a container
 # build, always fails non-critically) to auto-build immediately on
 # install; dnf5 reports that as a failed transaction even though the
