@@ -1,13 +1,14 @@
 # BlossomOS Flatpak package list
 # Read by 03-fetch.sh — generates preinstall files in /usr/share/flatpak/preinstall.d/
 # One app ID per line, comments and blank lines ignored
-# Format: <app_id> [remote] [branch] — remote adds Origin=, branch overrides the
-# default "stable" (needed for the blossomos remote, which doesn't use Flathub's
-# stable/beta branch convention)
+# Format: <app_id> [remote] [branch] [runtime] — remote adds Origin=, branch
+# overrides the default "stable" (needed for the blossomos remote, which doesn't
+# use Flathub's stable/beta branch convention), and a literal "runtime" marks
+# the entry as a runtime rather than an app
 
 # Office / Productivity
 org.libreoffice.LibreOffice
-org.mozilla.Thunderbird
+org.mozilla.thunderbird_esr
 
 # Graphics / Media
 org.gimp.GIMP
@@ -38,5 +39,5 @@ org.kde.kmines
 # org.kde.KStyle.BlossomUI is handled by blossomos-flatpak-kstyle-branches
 # instead: preinstall.d only supports one branch per app id, and this one
 # needs all three of its published branches installed at once
-org.freedesktop.Platform.Icontheme.BlossomUI blossomos 1.0
-org.gtk.Gtk3theme.BlossomUI blossomos 3.22
+org.freedesktop.Platform.Icontheme.BlossomUI blossomos 1.0 runtime
+org.gtk.Gtk3theme.BlossomUI blossomos 3.22 runtime

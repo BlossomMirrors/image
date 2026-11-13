@@ -1,0 +1,53 @@
+#!/bin/bash
+# Mark preinstall refs that older images never got recorded as preinstalled.
+#
+# `flatpak preinstall` only leaves an app alone once its ref is listed in the
+# system repo's xa.preinstalled key. It adds a ref there when it installs it
+# itself, or for every already-installed app the very first time it runs.
+# A ref that is already installed when preinstall first asks for it fails as
+# "already installed" and is never listed, so it gets reinstalled the next
+# time the user removes it.
+#
+#  - net.imput.helium: until e873f2b its entry asked for the "stable" branch,
+#    which the blossomos remote doesn't publish, so "master" was never listed.
+#    Once fixed, removing Helium got it reinstalled at the next boot, taking
+#    over the http/https default along the way.
+#  - org.mozilla.thunderbird_esr: replaces the end-of-life
+#    org.mozilla.Thunderbird entry. Flatpak already rebased existing installs
+#    to it, so without this it would be in the same state as Helium.
+#
+# Listing the refs hands them back to the user, as if preinstall had installed
+# them. Fresh systems, where flatpak hasn't written the key yet, are left to
+# flatpak: it marks or installs these apps itself.
+
+set -euo pipefail
+
+stamp="/var/lib/blossomos/flatpak-preinstall-migrate.version"
+repo="/var/lib/flatpak/repo"
+key="core.xa.preinstalled"
+
+if [[ -f "$stamp" ]]; then
+    exit 0
+fi
+
+arch="$(flatpak --default-arch)"
+refs=(
+    "app/net.imput.helium/${arch}/master"
+    "app/org.mozilla.thunderbird_esr/${arch}/stable"
+)
+
+if [[ -d "$repo" ]] && current="$(ostree config --repo="$repo" get "$key" 2>/dev/null)"; then
+    updated="$current"
+    for ref in "${refs[@]}"; do
+        if [[ ";${updated};" != *";${ref};"* ]]; then
+            updated="${updated:+${updated};}${ref}"
+            echo "Marking ${ref} as preinstalled"
+        fi
+    done
+    if [[ "$updated" != "$current" ]]; then
+        ostree config --repo="$repo" set "$key" "$updated"
+    fi
+fi
+
+mkdir -p "$(dirname "$stamp")"
+echo 1 >"$stamp"

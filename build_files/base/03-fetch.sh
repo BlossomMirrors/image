@@ -8,15 +8,15 @@ set -eoux pipefail
 flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # Generate flatpak preinstall files from packages.flatpak
-# Format: <app_id> [remote] [branch] — see packages.flatpak for details
+# Format: <app_id> [remote] [branch] [runtime] — see packages.flatpak for details
 mkdir -p /usr/share/flatpak/preinstall.d
-while read -r app_id remote branch; do
+while read -r app_id remote branch kind; do
     origin_line=""
     [[ -n "${remote:-}" ]] && origin_line="Origin=${remote}"
     cat > "/usr/share/flatpak/preinstall.d/${app_id}.preinstall" << EOF
 [Flatpak Preinstall ${app_id}]
 Branch=${branch:-stable}
-IsRuntime=false
+IsRuntime=$([[ "${kind:-}" == runtime ]] && echo true || echo false)
 ${origin_line}
 EOF
 done < <(grep -v '^#\|^[[:space:]]*$' /ctx/build_files/base/packages.flatpak)
