@@ -1,0 +1,11 @@
+[Unit]
+Description=Reset BlossomOS to factory settings on the next boot
+Documentation=https://help.blossom.computer
+
+# Only admins may start this, see
+# /usr/share/polkit-1/rules.d/50-blossomos-factory-reset.rules
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/mkdir -p /var/lib/blossomos
+ExecStart=/usr/bin/touch /var/lib/blossomos/factory-reset-requested

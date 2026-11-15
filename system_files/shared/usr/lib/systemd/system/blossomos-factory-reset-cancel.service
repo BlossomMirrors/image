@@ -1,0 +1,7 @@
+[Unit]
+Description=Don't reset BlossomOS to factory settings on the next boot
+Documentation=https://help.blossom.computer
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rm -f /var/lib/blossomos/factory-reset-requested

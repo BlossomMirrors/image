@@ -1,0 +1,22 @@
+[Unit]
+Description=BlossomOS Factory Reset
+Documentation=https://help.blossom.computer
+ConditionPathExists=/var/lib/blossomos/factory-reset-requested
+ConditionPathExists=/run/ostree-booted
+RequiresMountsFor=/var/home /etc
+After=local-fs.target dbus.service blossomos-bootmsg.service blossomos-snapper-setup.service
+# Before anyone can log in, before Reset on Restart puts its overlays over
+# the homes and before Plasma Setup decides whether to run
+Before=systemd-user-sessions.service display-manager.service plasma-setup.service
+Before=blossomos-home-reset.service brew-setup.service flatpak-preinstall.service
+Before=plymouth-quit.service plymouth-quit-wait.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-factory-reset
+TimeoutStartSec=infinity
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,237 @@
+#!/usr/bin/bash
+# BlossomOS factory reset
+#
+# Runs at boot, before the login screen and Plasma Setup, when a reset was
+# requested (blossomos-factory-reset-request.service, which only admins can
+# start). Removes every user with their files, the apps and containers they
+# installed, the home snapshots and the machine's personal settings, then
+# hands over to Plasma Setup as on a new computer.
+#
+# Each step is safe to run again: the request flag is only removed at the
+# very end, so a reset that was interrupted (power loss, crash) simply
+# starts over on the next boot.
+#
+# Progress is shown on the boot splash through blossomos-plymouth-status.
+
+set -uo pipefail
+
+REQUEST_FLAG=/var/lib/blossomos/factory-reset-requested
+STATUS=/usr/libexec/blossomos-plymouth-status
+FAILED=0
+
+[[ $EUID -eq 0 ]] || { echo "must run as root" >&2; exit 1; }
+[[ -e "$REQUEST_FLAG" ]] || { echo "no factory reset requested"; exit 0; }
+
+# The splash is shown before anyone picked a language in this run, so use
+# the one the machine was set up with.
+LANG_CODE=en
+if [[ -r /etc/locale.conf ]]; then
+    case "$(sed -n 's/^LANG=//p' /etc/locale.conf | tr -d '"')" in
+        de*) LANG_CODE=de ;;
+    esac
+fi
+
+msg() {
+    local key="$1"
+    if [[ $LANG_CODE == de ]]; then
+        case "$key" in
+            start) echo "Dein Computer wird zurückgesetzt. Bitte nicht ausschalten." ;;
+            snapshots) echo "Sicherungen werden gelöscht …" ;;
+            users) echo "Benutzer und ihre Dateien werden gelöscht …" ;;
+            apps) echo "Apps werden entfernt …" ;;
+            containers) echo "Container und virtuelle Maschinen werden gelöscht …" ;;
+            settings) echo "Einstellungen werden zurückgesetzt …" ;;
+            system) echo "System wird zurückgesetzt …" ;;
+            restart) echo "Fertig. Dein Computer wird neu gestartet …" ;;
+            done) echo "Fertig." ;;
+            failed) echo "Nicht alles konnte zurückgesetzt werden. Es geht trotzdem weiter …" ;;
+        esac
+    else
+        case "$key" in
+            start) echo "Resetting your computer. Please don't turn it off." ;;
+            snapshots) echo "Deleting backups…" ;;
+            users) echo "Deleting users and their files…" ;;
+            apps) echo "Removing apps…" ;;
+            containers) echo "Deleting containers and virtual machines…" ;;
+            settings) echo "Resetting settings…" ;;
+            system) echo "Resetting the system…" ;;
+            restart) echo "Done. Restarting your computer…" ;;
+            done) echo "Done." ;;
+            failed) echo "Not everything could be reset. Continuing anyway…" ;;
+        esac
+    fi
+}
+
+TOTAL_STEPS=6
+STEP=0
+step() {
+    STEP=$((STEP + 1))
+    "$STATUS" set "($STEP/$TOTAL_STEPS) $(msg "$1")"
+}
+
+warn() {
+    echo "factory-reset: $*" >&2
+    FAILED=1
+}
+
+# Unmounts whatever is mounted below a directory (an extra data disk in a
+# home, ...), so deleting the directory never reaches into another disk.
+# Not --one-file-system instead: btrfs subvolumes (container storage, ...)
+# count as other file systems for it and would be left behind.
+unmount_below() {
+    local dir="${1%/}" target
+    while read -r target; do
+        umount -R "$target" 2>/dev/null || umount -l "$target" || warn "could not unmount $target"
+    done < <(findmnt -rn -o TARGET | awk -v d="$dir/" 'index($0, d) == 1' | sort -r)
+}
+
+# Removes everything inside a directory but keeps the directory itself
+empty_dir() {
+    local dir="$1"
+    [[ -d "$dir" ]] || return 0
+    unmount_below "$dir"
+    find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} + || warn "could not empty $dir"
+}
+
+regular_users() {
+    getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }'
+}
+
+"$STATUS" set "$(msg start)"
+sleep 2
+
+# Reset on Restart (driveman) puts an overlay over every home, which would
+# turn all of the following into no-ops. Turn it off for good.
+rm -f /etc/blossomos/home-reset.conf
+
+# --- Snapshots ----------------------------------------------------------
+# First, so no copy of the user's files survives in a snapshot
+step snapshots
+if command -v snapper >/dev/null; then
+    while read -r config; do
+        [[ -n "$config" ]] || continue
+        mapfile -t numbers < <(snapper --no-dbus -c "$config" --csvout list --columns number 2>/dev/null |
+            tail -n +2 | grep -vx '0')
+        if ((${#numbers[@]})); then
+            snapper --no-dbus -c "$config" delete --sync "${numbers[@]}" || warn "could not delete snapshots of $config"
+        fi
+    done < <(snapper --no-dbus --csvout list-configs --columns config 2>/dev/null | tail -n +2)
+fi
+
+# --- Users --------------------------------------------------------------
+step users
+unmount_below /var/home
+while read -r user; do
+    [[ -n "$user" ]] || continue
+    pkill -KILL -u "$user" 2>/dev/null
+    userdel --remove --force "$user" || warn "could not delete user $user"
+done < <(regular_users)
+# Anything userdel left behind: homes of users deleted earlier, staged
+# BlossomOS Switch transfers, ... The snapshot subvolume stays.
+if [[ -d /var/home ]]; then
+    find /var/home -mindepth 1 -maxdepth 1 ! -name .snapshots -exec rm -rf {} + ||
+        warn "could not empty /var/home"
+fi
+empty_dir /var/lib/switch
+empty_dir /var/lib/AccountsService/users
+empty_dir /var/lib/AccountsService/icons
+empty_dir /var/lib/systemd/linger
+empty_dir /var/spool/mail
+empty_dir /var/lib/fprint
+
+# --- Apps ---------------------------------------------------------------
+step apps
+if command -v flatpak >/dev/null; then
+    # Keep the apps BlossomOS comes with, so the new owner doesn't have to
+    # wait for them to download again.
+    declare -A keep=()
+    for file in /usr/share/flatpak/preinstall.d/*.preinstall; do
+        [[ -e "$file" ]] || continue
+        while read -r app; do keep[$app]=1; done < <(sed -n 's/^\[Flatpak Preinstall \(.*\)\]$/\1/p' "$file")
+    done
+    remove=()
+    while read -r app; do
+        [[ -n "$app" && -z "${keep[$app]:-}" ]] && remove+=("$app")
+    done < <(flatpak list --system --app --columns=application 2>/dev/null)
+    if ((${#remove[@]})); then
+        flatpak uninstall --system --noninteractive --delete-data "${remove[@]}" || warn "could not remove some apps"
+    fi
+    flatpak uninstall --system --noninteractive --unused || warn "could not remove unused runtimes"
+    # Remotes the user added (the image's own ones are recreated on boot)
+    while read -r remote; do
+        case "$remote" in
+            flathub | blossomos) ;;
+            *) flatpak remote-delete --system --force "$remote" || warn "could not remove remote $remote" ;;
+        esac
+    done < <(flatpak remotes --system --columns=name 2>/dev/null)
+fi
+# Homebrew lived in /var/home/linuxbrew, which is gone with the homes;
+# brew-setup.service unpacks it again for the new owner
+rm -f /etc/.linuxbrew
+
+# --- Containers and VMs ---------------------------------------------------
+step containers
+# Rootless containers and distroboxes lived in the homes, these are the
+# system-wide ones.
+if command -v podman >/dev/null; then
+    podman system reset --force >/dev/null 2>&1 || warn "could not reset podman"
+fi
+for unit in docker.service docker.socket containerd.service waydroid-container.service libvirtd.service virtqemud.service; do
+    systemctl stop "$unit" 2>/dev/null
+done
+empty_dir /var/lib/docker
+empty_dir /var/lib/containerd
+empty_dir /var/lib/waydroid
+empty_dir /var/lib/libvirt/images
+rm -f /etc/libvirt/qemu/*.xml /etc/libvirt/qemu/autostart/*.xml 2>/dev/null
+
+# --- Settings -------------------------------------------------------------
+step settings
+empty_dir /etc/NetworkManager/system-connections
+empty_dir /var/lib/bluetooth
+rm -f /etc/hostname
+# Leftovers of an earlier Plasma Setup run; bootutil writes them anew
+rm -f /etc/plasmalogin.conf.d/99-plasma-setup.conf /etc/sddm.conf.d/99-plasma-setup.conf
+# Plasma Setup asks for a new password; nobody should be able to log in as
+# root with the old owner's one
+usermod -p '!' root || warn "could not lock root"
+
+# --- System ---------------------------------------------------------------
+step system
+REBOOT=0
+if command -v rpm-ostree >/dev/null; then
+    # Packages layered with pkglayer/rpm-ostree, overrides and initramfs
+    # changes. Only a new deployment can drop them, so this needs a restart.
+    if rpm-ostree status --booted --json 2>/dev/null | python3 -c '
+import json, sys
+keys = ("requested-packages", "requested-local-packages", "requested-base-removals",
+        "requested-base-local-replacements", "requested-modules")
+deployment = json.load(sys.stdin)["deployments"][0]
+sys.exit(0 if any(deployment.get(k) for k in keys) else 1)
+'; then
+        if rpm-ostree reset; then
+            REBOOT=1
+        else
+            warn "could not remove layered packages"
+        fi
+    fi
+fi
+
+# --- Done -----------------------------------------------------------------
+((FAILED)) && "$STATUS" set "$(msg failed)" && sleep 3
+
+# Show Plasma Setup again, as on a new computer
+rm -f /etc/plasma-setup-done
+rm -f "$REQUEST_FLAG"
+sync
+
+if ((REBOOT)); then
+    "$STATUS" set "$(msg restart)"
+    sleep 2
+    systemctl reboot
+else
+    "$STATUS" set "$(msg done)"
+    sleep 1
+    "$STATUS" reset
+fi
+exit 0

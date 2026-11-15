@@ -1,0 +1,24 @@
+// Factory reset deletes every user and their files. Only admins (wheel) may
+// ask for it, and they have to confirm with their password. Everyone else
+// is refused outright instead of being offered an admin password prompt.
+polkit.addRule(function(action, subject) {
+    if (action.id != "org.freedesktop.systemd1.manage-units" ||
+        action.lookup("verb") != "start") {
+        return polkit.Result.NOT_HANDLED;
+    }
+
+    var unit = action.lookup("unit");
+    if (unit == "blossomos-factory-reset-request.service") {
+        if (!subject.isInGroup("wheel")) {
+            return polkit.Result.NO;
+        }
+        return polkit.Result.AUTH_SELF;
+    }
+    if (unit == "blossomos-factory-reset-cancel.service") {
+        if (!subject.isInGroup("wheel")) {
+            return polkit.Result.NO;
+        }
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

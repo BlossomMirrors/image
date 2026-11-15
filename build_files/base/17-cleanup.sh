@@ -44,6 +44,7 @@ systemctl enable blossomos-recovery-boot-ok.service
 systemctl enable snapper-timeline.timer
 systemctl enable snapper-cleanup.timer
 systemctl enable blossomos-bootmsg.service
+systemctl enable blossomos-factory-reset.service
 systemctl enable blossomos-flatpak-overrides.service
 systemctl --global enable blossomos-flatpak-overrides-user.service
 systemctl --global enable podman-auto-update.timer
