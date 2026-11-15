@@ -69,6 +69,8 @@ systemctl enable flatpak-nuke-fedora.service
 # service links as well, so the image does not retain direct boot activation.
 systemctl disable flatpak-preinstall.service
 systemctl enable flatpak-preinstall.timer
+# Keeps preinstall from reinstalling Helium/Thunderbird after the user removes them
+systemctl enable blossomos-flatpak-preinstall-migrate.service
 
 # Fedora's atomic desktop preset enables these expensive cache refreshes at
 # every boot. Keep the refreshes, but run them after startup instead.

@@ -1,0 +1,12 @@
+[Unit]
+Description=Stop flatpak preinstall from reinstalling apps the user removed
+ConditionPathExists=!/var/lib/blossomos/flatpak-preinstall-migrate.version
+Before=flatpak-preinstall.service flatpak-system-helper.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/blossomos-flatpak-preinstall-migrate
+
+[Install]
+WantedBy=multi-user.target

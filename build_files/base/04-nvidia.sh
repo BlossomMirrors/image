@@ -51,15 +51,16 @@ dnf5 -y install \
     egl-wayland \
     libva-nvidia-driver
 
-# BASE_IMAGE_NAME is always kinoite here; supergfxctl is ublue-os/staging's
-# hybrid GPU switching daemon for kinoite/silverblue.
-copr_install_isolated "ublue-os/staging" supergfxctl
-
 # Read straight from the built module rather than `rpm -q kmod-nvidia`:
 # akmods registers it under a kernel-embedded name like
 # kmod-nvidia-${KERNEL_UNAME_R}, not the bare name.
 KMOD_VERSION="$(modinfo -F version /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
+KMOD_LICENSE="$(modinfo -F license /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
 NVIDIA_DRIVER_VERSION="$(rpm -q --queryformat '%{VERSION}' nvidia-driver)"
+if [[ "${KMOD_LICENSE}" != "Dual MIT/GPL" ]]; then
+    echo "Error: expected the open NVIDIA kmod, got license ${KMOD_LICENSE}"
+    exit 1
+fi
 if [[ "${KMOD_VERSION}" != "${NVIDIA_DRIVER_VERSION}" ]]; then
     echo "Error: kmod-nvidia version (${KMOD_VERSION}) does not match nvidia-driver version (${NVIDIA_DRIVER_VERSION})"
     exit 1
@@ -68,6 +69,13 @@ fi
 dnf5 config-manager setopt fedora-nvidia*.enabled=0 nvidia-container-toolkit.enabled=0
 
 semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
+
+# Put the KMS option where dracut reads it when composing the initramfs.
+# negativo17 dropped this file from the 615+ branches (modeset defaults to
+# on there, and nvidia-drm.modeset=1 is set via kargs below anyway).
+if [[ -f /etc/modprobe.d/nvidia-modeset.conf ]]; then
+    install -Dm0644 /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/nvidia-modeset.conf
+fi
 
 # force driver load to fix black screen on boot for nvidia desktops, and
 # pre-load intel/amd iGPU else chromium web browsers fail to use hardware

@@ -2,7 +2,7 @@
 
 echo "::group:: ===$(basename "$0")==="
 
-set -ouex pipefail
+set -euo pipefail
 
 #shellcheck source=build_files/shared/blossom-repo.sh
 source /ctx/build_files/shared/blossom-repo.sh
@@ -51,7 +51,7 @@ dnf5 -y install \
 plymouth-set-default-theme blossom
 
 # Replace stock kinfocenter with our BlossomOS-patched build
-blossom_replace_pkg kinfocenter
+blossom_replace_pkg --replacepkgs kinfocenter
 
 # Replace stock xdg-desktop-portal with our BlossomOS-patched build, so files opened from sandboxed apps (e.g. Helium) reach flatpaks with sub id desktop files like org.libreoffice.LibreOffice.writer
 blossom_replace_pkg xdg-desktop-portal

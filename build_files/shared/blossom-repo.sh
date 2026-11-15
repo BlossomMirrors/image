@@ -36,24 +36,25 @@ _blossom_rpm_snapshot() {
 }
 
 # Replace stock packages with our patched builds from the BlossomOS repo.
-#   blossom_replace_pkg [--replacefiles] <pkg>...
-# Fails the build if a stock package is the same or newer than ours (dnf5
-# would silently keep the stock one), if our build didn't end up installed,
-# or if the transaction downgraded anything.
+#   blossom_replace_pkg [--replacefiles|--replacepkgs] <pkg>...
+# Fails the build if a stock package is newer than ours, or has the same EVR
+# without --replacepkgs (dnf5 would silently keep the stock one), if our build
+# didn't end up installed, or if the transaction downgraded anything.
 # --replacefiles installs via `rpm -i --replacefiles` for overlay packages
 # whose files are owned by another package.
+# --replacepkgs reinstalls an equal-EVR package via `rpm -U --replacepkgs`.
 blossom_replace_pkg() {
-    local replacefiles=0
-    if [[ "${1:-}" == "--replacefiles" ]]; then
-        replacefiles=1
-        shift
-    fi
+    local replacefiles=0 replacepkgs=0
+    case "${1:-}" in
+        --replacefiles) replacefiles=1; shift ;;
+        --replacepkgs) replacepkgs=1; shift ;;
+    esac
 
     local dir
     dir="$(mktemp -d /tmp/blossom-replace.XXXXXX)"
     dnf5 download --destdir="${dir}" --disablerepo='*' --enablerepo="${BLOSSOM_REPO_ID}" "$@"
 
-    local rpmf name new old fail=0
+    local rpmf name new old cmp fail=0
     local -a expected=()
     for rpmf in "${dir}"/*.rpm; do
         name="$(rpm -qp --qf '%{NAME}' "${rpmf}")"
@@ -61,7 +62,8 @@ blossom_replace_pkg() {
         expected+=("${name} ${new}")
         while read -r old; do
             [[ -n "${old}" ]] || continue
-            if (( $(blossom_vercmp "${old}" "${new}") >= 0 )); then
+            cmp="$(blossom_vercmp "${old}" "${new}")"
+            if (( cmp > 0 || (cmp == 0 && replacepkgs == 0) )); then
                 echo "ERROR: ${name}: installed ${old} is not older than BlossomOS build ${new}; our patched build would not be applied. Rebuild ${name} against the current base." >&2
                 fail=1
             fi
@@ -76,6 +78,8 @@ blossom_replace_pkg() {
     before="$(_blossom_rpm_snapshot)"
     if (( replacefiles )); then
         rpm -i --replacefiles "${dir}"/*.rpm
+    elif (( replacepkgs )); then
+        rpm -U --replacepkgs "${dir}"/*.rpm
     else
         dnf5 install -y "${dir}"/*.rpm
     fi

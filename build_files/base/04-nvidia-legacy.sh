@@ -29,6 +29,11 @@ gpgcheck=1
 gpgkey=https://negativo17.org/repos/RPM-GPG-KEY-slaanesh
 enabled_metadata=1
 metadata_expire=6h
+# fedora-multimedia (negativo17, enabled at priority=90 in 01-packages.sh)
+# also ships akmod-nvidia/nvidia-driver from the newest branch, which no
+# longer supports these GPUs. Outrank it so every nvidia package resolves
+# from the 580 branch instead.
+priority=80
 type=rpm-md
 repo_gpgcheck=0
 EOF
@@ -39,7 +44,11 @@ dnf5 config-manager setopt fedora-nvidia.enabled=0 fedora-nvidia-580.enabled=1 n
 
 # Pin an exact NVR so the akmod and the userspace driver below resolve to
 # the same release even if negativo17 publishes a new build mid-transaction.
-DRIVER_VERSION="$(dnf5 info akmod-nvidia | grep -E '^Version|^Release' | awk '{print $3}' | xargs | sed 's/ /-/')"
+DRIVER_VERSION="$(dnf5 -q repoquery --repo=fedora-nvidia-580 --latest-limit=1 --queryformat '%{version}-%{release}' akmod-nvidia)"
+if [[ "${DRIVER_VERSION}" != 580.* ]]; then
+    echo "Error: expected a 580 akmod-nvidia from fedora-nvidia-580, got '${DRIVER_VERSION}'"
+    exit 1
+fi
 # akmod-nvidia's own %post always tries (and, as root inside a container
 # build, always fails non-critically) to auto-build immediately on
 # install; dnf5 reports that as a failed transaction even though the
@@ -66,15 +75,16 @@ dnf5 -y install \
     egl-wayland \
     libva-nvidia-driver
 
-# BASE_IMAGE_NAME is always kinoite here; supergfxctl is ublue-os/staging's
-# hybrid GPU switching daemon for kinoite/silverblue.
-copr_install_isolated "ublue-os/staging" supergfxctl
-
 # Read straight from the built module rather than `rpm -q kmod-nvidia`:
 # akmods registers it under a kernel-embedded name like
 # kmod-nvidia-${KERNEL_UNAME_R}, not the bare name.
 KMOD_VERSION="$(modinfo -F version /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
+KMOD_LICENSE="$(modinfo -F license /usr/lib/modules/"${KERNEL_UNAME_R}"/extra/nvidia/nvidia.ko.xz)"
 NVIDIA_DRIVER_VERSION="$(rpm -q --queryformat '%{VERSION}' nvidia-driver)"
+if [[ "${KMOD_LICENSE}" != "NVIDIA" ]]; then
+    echo "Error: expected the proprietary NVIDIA kmod, got license ${KMOD_LICENSE}"
+    exit 1
+fi
 if [[ "${KMOD_VERSION}" != "${NVIDIA_DRIVER_VERSION}" ]]; then
     echo "Error: kmod-nvidia version (${KMOD_VERSION}) does not match nvidia-driver version (${NVIDIA_DRIVER_VERSION})"
     exit 1
@@ -83,6 +93,9 @@ fi
 dnf5 config-manager setopt fedora-nvidia-580.enabled=0 nvidia-container-toolkit.enabled=0
 
 semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
+
+# Put the KMS option where dracut reads it when composing the initramfs.
+install -Dm0644 /etc/modprobe.d/nvidia-modeset.conf /usr/lib/modprobe.d/nvidia-modeset.conf
 
 # force driver load to fix black screen on boot for nvidia desktops, and
 # pre-load intel/amd iGPU else chromium web browsers fail to use hardware
