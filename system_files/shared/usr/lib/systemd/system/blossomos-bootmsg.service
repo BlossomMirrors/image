@@ -2,12 +2,13 @@
 Description=BlossomOS Boot Splash Message
 DefaultDependencies=no
 After=plymouth-start.service
-Before=plymouth-quit.service sysinit.target
+Before=sysinit.target
+ConditionPathExists=/usr/bin/plymouth
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/usr/libexec/blossomos-bootmsg
+# Keeps the text on the splash until Plymouth quits, see the script
+Type=simple
+ExecStart=/usr/libexec/blossomos-plymouth-status daemon
 
 [Install]
 WantedBy=sysinit.target

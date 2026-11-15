@@ -1,0 +1,87 @@
+#!/usr/bin/bash
+# Keeps a status line on the Plymouth boot splash.
+#
+#   blossomos-plymouth-status daemon       keep the current text on screen
+#   blossomos-plymouth-status set TEXT     change the text (also logs it)
+#   blossomos-plymouth-status reset        go back to the boot message
+#
+# A single `plymouth display-message` does not stick: the message can be
+# dropped when the splash is (re)shown, e.g. after Plymouth's show delay or
+# a mode change, and then stays gone. The daemon owns the text and puts it
+# back every few seconds for as long as Plymouth is running, so whatever
+# sets the text (the boot message, the factory reset, ...) never has to
+# care about that. It exits on its own once Plymouth has quit.
+
+STATUS_DIR=/run/blossomos
+STATUS_FILE="$STATUS_DIR/plymouth-status"
+PID_FILE="$STATUS_DIR/plymouth-status.pid"
+DEFAULT_FILE=/usr/lib/blossomos/bootmsg-text
+# Seconds between putting the same text back
+REASSERT=3
+
+current_text() {
+    local text=""
+    if [[ -s "$STATUS_FILE" ]]; then
+        read -r text <"$STATUS_FILE"
+    elif [[ -r "$DEFAULT_FILE" ]]; then
+        read -r text <"$DEFAULT_FILE"
+    fi
+    printf '%s' "$text"
+}
+
+show() {
+    local old="$1" new="$2"
+    [[ -n "$old" ]] && plymouth hide-message --text="$old" 2>/dev/null
+    [[ -n "$new" ]] && plymouth display-message --text="$new" 2>/dev/null
+}
+
+daemon_running() {
+    local pid
+    [[ -r "$PID_FILE" ]] && read -r pid <"$PID_FILE" && [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+run_daemon() {
+    mkdir -p "$STATUS_DIR"
+    echo $$ >"$PID_FILE"
+    trap 'rm -f "$PID_FILE"' EXIT
+
+    local shown="" text last=0
+    # Plymouth may still be starting up
+    for _ in {1..20}; do
+        plymouth --ping 2>/dev/null && break
+        sleep 0.5
+    done
+
+    while plymouth --ping 2>/dev/null; do
+        text=$(current_text)
+        if [[ "$text" != "$shown" ]] || ((SECONDS - last >= REASSERT)); then
+            show "$shown" "$text"
+            shown="$text"
+            last=$SECONDS
+        fi
+        sleep 0.5
+    done
+}
+
+set_text() {
+    mkdir -p "$STATUS_DIR"
+    local tmp
+    tmp=$(mktemp "$STATUS_DIR/.plymouth-status.XXXXXX") || return 1
+    printf '%s\n' "$1" >"$tmp" && mv -f "$tmp" "$STATUS_FILE"
+    echo "$1"
+    # Without the daemon, at least show it once
+    if ! daemon_running && plymouth --ping 2>/dev/null; then
+        plymouth display-message --text="$1" 2>/dev/null
+    fi
+    return 0
+}
+
+case "${1:-}" in
+    daemon) run_daemon ;;
+    set) shift; set_text "$*" ;;
+    reset) rm -f "$STATUS_FILE" ;;
+    *)
+        echo "usage: $0 daemon | set TEXT | reset" >&2
+        exit 2
+        ;;
+esac
