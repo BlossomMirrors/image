@@ -11,7 +11,7 @@ source /ctx/build_files/shared/copr-helpers.sh
 
 # BlossomOS kernel build
 # Not derived from the KERNEL build-arg. KERNEL picks the closest matching
-# ublue-os akmods image, whose ostree.linux label carries a fc44 dist tag,
+# ublue-os akmods image, whose ostree.linux label carries a fc45 dist tag,
 # but repo.blossomos.org's kernel package NVR does not carry one. Bump this
 # by hand whenever a new kernel build is published to repo.blossomos.org.
 BLOSSOM_KERNEL_VERSION="7.2.11-200"
@@ -81,7 +81,7 @@ chmod 1777 /var/tmp
 # xone (Xbox controller/wireless adapter) from ublue-os' own akmods COPR,
 # as an akmod (dkms-buildable source) instead of the precompiled kmod-xone
 # mounted from the akmods image, which is built against Fedora's stock
-# fc44-tagged kernel and can never match our kernel-uname-r.
+# fc45-tagged kernel and can never match our kernel-uname-r.
 #
 # akmod-* packages' own %post/%posttrans hooks always try (and, as root
 # inside a container build, always fail non-critically) to auto-build

@@ -7,12 +7,12 @@ set -eoux pipefail
 #shellcheck source=build_files/shared/copr-helpers.sh
 source /ctx/build_files/shared/copr-helpers.sh
 
-# Not available for Fedora 43 yet
+# Not available for Fedora 45 yet
 dnf config-manager setopt excludepkgs=golang-github-nvidia-container-toolkit
 
 # BlossomOS builds the nvidia-open kmod itself instead of relying on
 # ublue-os/akmods' bundled nvidia-install.sh: its precompiled kmod-nvidia
-# is built against Fedora's stock fc44-tagged kernel and hard-requires a
+# is built against Fedora's stock fc45-tagged kernel and hard-requires a
 # kernel-uname-r our kernel-core doesn't provide, which fails the install
 # outright. ublue-os-nvidia-addons (repo files, nvidia CDI service,
 # SELinux policy) is still pulled from their akmods-nvidia-open image

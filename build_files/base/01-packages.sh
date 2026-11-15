@@ -67,6 +67,10 @@ case "$FEDORA_MAJOR_VERSION" in
         FEDORA_PACKAGES+=(
         )
         ;;
+    45)
+        FEDORA_PACKAGES+=(
+        )
+        ;;
 esac
 
 NEGATIVO_PACKAGES=(
@@ -200,6 +204,9 @@ case "$FEDORA_MAJOR_VERSION" in
     44)
 
         ;;
+    45)
+
+        ;;
 esac
 
 # kAirpods from ledif/kairpods COPR
@@ -262,6 +269,9 @@ case "$FEDORA_MAJOR_VERSION" in
         EXCLUDED_PACKAGES+=()
         ;;
     44)
+        EXCLUDED_PACKAGES+=()
+        ;;
+    45)
         EXCLUDED_PACKAGES+=()
         ;;
 esac

@@ -7,7 +7,7 @@ set -eoux pipefail
 #shellcheck source=build_files/shared/copr-helpers.sh
 source /ctx/build_files/shared/copr-helpers.sh
 
-# Not available for Fedora 43 yet
+# Not available for Fedora 45 yet
 dnf config-manager setopt excludepkgs=golang-github-nvidia-container-toolkit
 
 # ublue-os-nvidia-addons (repo files, nvidia CDI service, SELinux policy) is

@@ -8,7 +8,7 @@
 
 ## BlossomOS version
 
-<!-- Run `sudo bootc status` and get the current version. e.g. latest-44.20260801 -->
+<!-- Run `sudo bootc status` and get the current version. e.g. latest-45.20261115 -->
 
 ## Exact steps to reproduce this error
 
