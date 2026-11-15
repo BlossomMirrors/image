@@ -61,6 +61,17 @@ blossom_replace_pkg plasma-setup
 
 # Overlay our BlossomOS-patched Session KCM on the stock plasma-desktop, so it can pick BlossomOS Recovery for the next restart (with blossom-recovery's units and polkit rule).
 # Its files are also owned by plasma-desktop and dnf5 has no --replacefiles flag, so it is installed via rpm directly
+# It requires exactly the plasma-desktop it was built from (the latest one in Fedora's updates), which the base
+# image may not have caught up with yet, so first move plasma-desktop to that version
+KCM_PLASMA_DESKTOP="$(dnf5 repoquery -q --disablerepo='*' --enablerepo="${REPO_ID}" --latest-limit=1 --requires kcm_smserver-blossomos |
+    sed -n 's/^plasma-desktop(x86-64) = //p' | head -1)"
+if [[ -z "${KCM_PLASMA_DESKTOP}" ]]; then
+    echo "ERROR: could not tell which plasma-desktop kcm_smserver-blossomos needs" >&2
+    exit 1
+fi
+if [[ "$(rpm -q --qf '%{VERSION}' plasma-desktop)" != "${KCM_PLASMA_DESKTOP}" ]]; then
+    dnf5 -y install --allowerasing "plasma-desktop-${KCM_PLASMA_DESKTOP}"
+fi
 blossom_replace_pkg --replacefiles kcm_smserver-blossomos
 
 # Install OpenRazer daemon (kmod is installed by the akmods module)
