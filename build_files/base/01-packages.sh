@@ -87,6 +87,12 @@ NEGATIVO_PACKAGES=(
 echo "Installing ${#FEDORA_PACKAGES[@]} packages from Fedora repos and ${#NEGATIVO_PACKAGES[@]} from Negativo..."
 dnf5 -y install "${FEDORA_PACKAGES[@]}" "${NEGATIVO_PACKAGES[@]}"
 
+# kcm-fcitx5 5.1.16-1.fc45 still links libPlasma.so.7, but Fedora 45's
+# libplasma ships libPlasma.so.8, so it can't be installed until Fedora
+# rebuilds it. Installed on its own with --skip-broken so the build goes
+# through meanwhile and picks up the rebuild by itself once it lands.
+dnf5 -y install --skip-broken kcm-fcitx5
+
 # waydroid selinux's own semodule call in its postinstall scriptlet does
 # not take effect inside the build container's policy store (same issue
 # as nvidia container.pp below), leaving waydroid_rootfs_t undefined and
