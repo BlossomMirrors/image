@@ -145,6 +145,8 @@ EOF
 echo "Installing mullvad-vpn from official repo..."
 dnf config-manager addrepo --overwrite --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
 dnf config-manager setopt mullvad-stable.enabled=0
+# rpm -i below checks the signature against the rpmdb keyring, which dnf5 download does not populate
+rpm --import https://repository.mullvad.net/rpm/mullvad-keyring.asc
 dnf5 download --destdir=/tmp/mullvad --enablerepo='mullvad-stable' mullvad-vpn
 # rpm -i below does not resolve dependencies like dnf install would
 dnf5 -y install dbus-libs libXScrnSaver libnotify
