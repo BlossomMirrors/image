@@ -102,7 +102,11 @@ curl "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -
 dnf5 install -y /tmp/rpmfusion-free-release.rpm
 rm -f /tmp/rpmfusion-free-release.rpm
 dnf -y install akmod-v4l2loopback || true
-sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/rpmfusion-free*.repo
+for repo in /etc/yum.repos.d/rpmfusion-free*.repo /usr/share/dnf5/repos.d/rpmfusion-free*.repo; do
+    if [[ -f "$repo" ]]; then
+        sed -i 's@enabled=1@enabled=0@g' "$repo"
+    fi
+done
 akmods --force --kernels "${BLOSSOM_KERNEL_VERSION}.x86_64" --kmod v4l2loopback || true
 
 # OpenRazer from hardware:razer repo (not a COPR)

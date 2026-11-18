@@ -142,7 +142,7 @@ for i in /etc/yum.repos.d/_copr:*.repo; do
 done
 
 # Disable RPM Fusion repos
-for i in /etc/yum.repos.d/rpmfusion-*.repo; do
+for i in /etc/yum.repos.d/rpmfusion-*.repo /usr/share/dnf5/repos.d/rpmfusion-*.repo; do
     if [[ -f "$i" ]]; then
         sed -i 's@enabled=1@enabled=0@g' "$i"
     fi

@@ -85,7 +85,7 @@ done
 
 echo ""
 echo "Checking RPM Fusion repositories..."
-for repo in "$REPOS_DIR"/rpmfusion-*.repo; do
+for repo in "$REPOS_DIR"/rpmfusion-*.repo /usr/share/dnf5/repos.d/rpmfusion-*.repo; do
     [[ -f "$repo" ]] && check_repo_file "$repo"
 done
 
