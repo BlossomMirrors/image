@@ -74,18 +74,20 @@ case "$FEDORA_MAJOR_VERSION" in
 esac
 
 NEGATIVO_PACKAGES=(
-    ffmpeg
-    ffmpeg-libs
     intel-vaapi-driver
     libfdk-aac
     libva-utils
     pipewire-libs-extra
     uld
-  )
+)
 
 # Install all Fedora packages (bulk - safe from COPR injection)
 echo "Installing ${#FEDORA_PACKAGES[@]} packages from Fedora repos and ${#NEGATIVO_PACKAGES[@]} from Negativo..."
-dnf5 -y install "${FEDORA_PACKAGES[@]}" "${NEGATIVO_PACKAGES[@]}"
+dnf5 -y install \
+    --disablerepo=fedora-multimedia \
+    "${FEDORA_PACKAGES[@]}"
+
+dnf5 -y install "${NEGATIVO_PACKAGES[@]}"
 
 # kcm-fcitx5 5.1.16-1.fc45 still links libPlasma.so.7, but Fedora 45's
 # libplasma ships libPlasma.so.8, so it can't be installed until Fedora
