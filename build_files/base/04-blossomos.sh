@@ -87,6 +87,17 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/hardware:razer.repo
 # blossomos-shellconfig and plasma-patches-blossom conflict with existing files;
 # dnf5 has no --replacefiles flag so install via rpm directly
 dnf5 download --destdir=/tmp/blossom --enablerepo="${REPO_ID}" blossomos-shellconfig plasma-patches-blossom
+# rpm doesn't resolve dependencies, so install the plain ones the image doesn't
+# have yet first (e.g. git: Fedora 45's base only ships git-core). Versioned
+# and rich dependencies are left for rpm to check.
+BLOSSOM_MISSING_DEPS=()
+while read -r dep; do
+    rpm -q --whatprovides "${dep}" >/dev/null 2>&1 || BLOSSOM_MISSING_DEPS+=("${dep}")
+done < <(rpm -qpR /tmp/blossom/blossomos-shellconfig*.rpm /tmp/blossom/plasma-patches-blossom*.rpm |
+    grep -vE '^(rpmlib\(|\()' | grep -v ' ' | sort -u)
+if ((${#BLOSSOM_MISSING_DEPS[@]})); then
+    dnf5 -y install --enablerepo="${REPO_ID}" "${BLOSSOM_MISSING_DEPS[@]}"
+fi
 rpm -i --replacefiles /tmp/blossom/blossomos-shellconfig*.rpm /tmp/blossom/plasma-patches-blossom*.rpm
 rm -rf /tmp/blossom
 
