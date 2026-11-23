@@ -33,7 +33,6 @@ dnf5 -y install \
     quick-appearance-kcm \
     dmemcg-booster \
     kcgroups-dmemcg \
-    plasma-foreground-booster \
     goxlr-utility \
     atuin \
     umu-launcher \
