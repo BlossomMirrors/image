@@ -16,10 +16,15 @@ blossom_repo_setup
 # cannot be deleted by a normal transaction
 rpm -e --nodeps --justdb generic-logos 2>/dev/null || true
 
+# Lay our branding over fedora-release-common's /etc/os-release and friends
+# instead of replacing that package: fedora-release-kinoite requires its exact
+# version, and Fedora 45's redhat-systemd-presets-common conflicts with any
+# other provider of it. First, since it also provides system-logos.
+blossom_replace_pkg --replacefiles blossomos-branding
+
 # Install BlossomOS RPM packages
 dnf5 -y install \
     --enablerepo="${REPO_ID}" \
-    blossomos-branding \
     blossom-arc \
     google-noto-emoji-fonts-3d \
     blossomos-webapps \
