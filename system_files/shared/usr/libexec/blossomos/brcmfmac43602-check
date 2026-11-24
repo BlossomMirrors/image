@@ -3,8 +3,9 @@ set -u
 
 STATE=/etc/blossomos/brcmfmac43602
 RUNTIME=/run/blossomos-brcmfmac43602
+VARIANTS=("none|" "none|feature_disable=0" "bootcamp|feature_disable=0" "ratcliffe|feature_disable=0")
 
-[[ -f "$RUNTIME/options" ]] || exit 0
+[[ -f "$RUNTIME/chip" ]] || exit 0
 [[ -f "$STATE/confirmed" || -f "$STATE/exhausted" ]] && exit 0
 mkdir -p "$STATE"
 
@@ -21,7 +22,7 @@ wait_connected() {
 }
 
 known_network_in_range() {
-    local visible name ssid
+    local visible name type ssid
     visible=$(nmcli -t -f SSID device wifi list --rescan yes 2>/dev/null)
     while IFS=: read -r name type; do
         [[ "$type" == 802-11-wireless ]] || continue
@@ -29,6 +30,11 @@ known_network_in_range() {
         [[ -n "$ssid" ]] && grep -qxF "$ssid" <<< "$visible" && return 0
     done < <(nmcli -t -f NAME,TYPE connection show 2>/dev/null)
     return 1
+}
+
+use() {
+    echo "${1%%|*}" > "$STATE/template"
+    echo "${1#*|}" > "$STATE/options"
 }
 
 reload_driver() {
@@ -41,28 +47,30 @@ reload_driver() {
     systemctl start NetworkManager
 }
 
-confirm() {
-    echo "$1" > "$STATE/template"
+current="$(cat "$RUNTIME/template" 2>/dev/null || echo none)|$(cat "$RUNTIME/options" 2>/dev/null)"
+if wait_connected 45; then
+    use "$current"
     touch "$STATE/confirmed"
-    echo "brcmfmac43602: connected with the $1 board configuration"
+    echo "brcmfmac43602: connected with $current"
     exit 0
-}
-
-current=$(cat "$RUNTIME/template" 2>/dev/null || echo bootcamp)
-wait_connected 45 && confirm "$current"
+fi
 known_network_in_range || { echo "brcmfmac43602: no saved network in range, nothing to judge"; exit 0; }
 
-for template in bootcamp ratcliffe none; do
-    [[ "$template" == "$current" ]] && continue
-    echo "brcmfmac43602: no connection with $current, trying $template"
-    echo "$template" > "$STATE/template"
+for variant in "${VARIANTS[@]}"; do
+    [[ "$variant" == "$current" ]] && continue
+    echo "brcmfmac43602: no connection with $current, trying $variant"
+    use "$variant"
     reload_driver
-    wait_connected 60 && confirm "$template"
-    current=$template
+    current=$variant
+    if wait_connected 60; then
+        touch "$STATE/confirmed"
+        echo "brcmfmac43602: connected with $variant"
+        exit 0
+    fi
 done
 
-echo bootcamp > "$STATE/template"
+use "${VARIANTS[0]}"
 touch "$STATE/exhausted"
-echo "brcmfmac43602: no board configuration connected, back to bootcamp"
+echo "brcmfmac43602: no variant connected, back to the plain driver"
 reload_driver
 exit 0

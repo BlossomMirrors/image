@@ -13,12 +13,15 @@ done
 [[ -n "$found" ]] || exit 0
 
 mkdir -p "$RUNTIME"
-echo "feature_disable=0" > "$RUNTIME/options"
-
-template=$(cat "$STATE/template" 2>/dev/null || echo bootcamp)
+touch "$RUNTIME/chip"
+template=$(cat "$STATE/template" 2>/dev/null || echo none)
+options=$(cat "$STATE/options" 2>/dev/null || true)
+[[ "$options" =~ ^(feature_disable=[0-9x]+)?$ ]] || options=
+[[ "$template" == none || -r "$TEMPLATES/$template.txt" ]] || template=none
 echo "$template" > "$RUNTIME/template"
+echo "$options" > "$RUNTIME/options"
+rm -rf "$FIRMWARE/brcm"
 [[ "$template" == none ]] && exit 0
-[[ -r "$TEMPLATES/$template.txt" ]] || template=bootcamp
 
 mac=$(tr 'A-F' 'a-f' < /etc/blossomos/wifi-macaddr 2>/dev/null | tr -d '[:space:]')
 if ! [[ "$mac" =~ ^([0-9a-f]{2}:){5}[0-9a-f]{2}$ ]] || [[ "$mac" == 00:00:00:00:00:00 ]]; then
