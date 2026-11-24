@@ -1,0 +1,4 @@
+# Apple T2 Macs: bridgeOS exposes an internal USB ethernet (NCM) link to the
+# host with this fixed MAC. Give it a stable name so NetworkManager can leave
+# it alone (see NetworkManager/conf.d/90-blossomos-apple-t2-ncm.conf).
+SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="ac:de:48:00:11:22", NAME="t2_ncm"
