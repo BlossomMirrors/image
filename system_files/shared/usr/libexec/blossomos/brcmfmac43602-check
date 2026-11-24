@@ -1,0 +1,68 @@
+#!/usr/bin/bash
+set -u
+
+STATE=/etc/blossomos/brcmfmac43602
+RUNTIME=/run/blossomos-brcmfmac43602
+
+[[ -f "$RUNTIME/options" ]] || exit 0
+[[ -f "$STATE/confirmed" || -f "$STATE/exhausted" ]] && exit 0
+mkdir -p "$STATE"
+
+connected() {
+    nmcli -t -f TYPE,STATE device 2>/dev/null | grep -qx 'wifi:connected'
+}
+
+wait_connected() {
+    for _ in $(seq "$1"); do
+        connected && return 0
+        sleep 2
+    done
+    return 1
+}
+
+known_network_in_range() {
+    local visible name ssid
+    visible=$(nmcli -t -f SSID device wifi list --rescan yes 2>/dev/null)
+    while IFS=: read -r name type; do
+        [[ "$type" == 802-11-wireless ]] || continue
+        ssid=$(nmcli -g 802-11-wireless.ssid connection show id "$name" 2>/dev/null)
+        [[ -n "$ssid" ]] && grep -qxF "$ssid" <<< "$visible" && return 0
+    done < <(nmcli -t -f NAME,TYPE connection show 2>/dev/null)
+    return 1
+}
+
+reload_driver() {
+    systemctl stop NetworkManager
+    for module in brcmfmac_wcc brcmfmac_bca brcmfmac_cyw brcmfmac; do
+        grep -q "^$module " /proc/modules && rmmod "$module"
+    done
+    modprobe brcmfmac
+    sleep 3
+    systemctl start NetworkManager
+}
+
+confirm() {
+    echo "$1" > "$STATE/template"
+    touch "$STATE/confirmed"
+    echo "brcmfmac43602: connected with the $1 board configuration"
+    exit 0
+}
+
+current=$(cat "$RUNTIME/template" 2>/dev/null || echo bootcamp)
+wait_connected 45 && confirm "$current"
+known_network_in_range || { echo "brcmfmac43602: no saved network in range, nothing to judge"; exit 0; }
+
+for template in bootcamp ratcliffe none; do
+    [[ "$template" == "$current" ]] && continue
+    echo "brcmfmac43602: no connection with $current, trying $template"
+    echo "$template" > "$STATE/template"
+    reload_driver
+    wait_connected 60 && confirm "$template"
+    current=$template
+done
+
+echo bootcamp > "$STATE/template"
+touch "$STATE/exhausted"
+echo "brcmfmac43602: no board configuration connected, back to bootcamp"
+reload_driver
+exit 0

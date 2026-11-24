@@ -28,6 +28,7 @@ systemctl disable NetworkManager-wait-online.service
 # Enable all other neccesary services
 systemctl enable brew-setup.service
 systemctl enable blossomos-groups.service
+systemctl enable blossomos-brcmfmac43602.service
 systemctl enable blossomos-grub-migrate.service
 systemctl enable blossomos-firewall-migrate.service
 systemctl enable ufw.service

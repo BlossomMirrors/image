@@ -1,0 +1,12 @@
+[Unit]
+Description=Pick a working Wi-Fi board configuration for the Broadcom BCM43602
+After=NetworkManager.service
+Wants=NetworkManager.service
+ConditionPathExists=/run/blossomos-brcmfmac43602/options
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/blossomos/brcmfmac43602-check
+
+[Install]
+WantedBy=multi-user.target
