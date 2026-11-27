@@ -178,12 +178,15 @@ RUN --mount=type=tmpfs,dst=/boot \
 #endif
 
 # /* BlossomOS RPM packages and Flatpak remote */
+# /* Sync zstd and libzstd before the offline initramfs build. */
 RUN --mount=type=tmpfs,dst=/boot \
     --mount=type=tmpfs,dst=/var \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     /ctx/build_files/base/04-blossomos.sh && \
-    { [[ "${IMAGE_FLAVOR}" != "dx" ]] || /ctx/build_files/base/05-blossomos-dx.sh; }
+    { [[ "${IMAGE_FLAVOR}" != "dx" ]] || /ctx/build_files/base/05-blossomos-dx.sh; } && \
+    dnf5 -y distro-sync --disablerepo='*' --enablerepo=fedora --enablerepo=updates zstd libzstd && \
+    printf 'zstd check\n' | zstd -q -c > /dev/null
 
 # /* Everything that can be done offline after things are in place should be done here */
 RUN --network=none \
